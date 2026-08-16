@@ -1,0 +1,23 @@
+Jeg driver å lager et spill med bruk av html, css, js og Three.js. Dette spillet skal være et open verden, 
+fantasy, rpg, dungeon crawler spill, med items, fiender, quests og en engasjerende verden.
+Den nærmeste sammenligningen til andre spill er old scool runescape (classic). Jeg liker retro aspektet.
+Det vi har fikset til nå er:
+1. tredje person movement som er click based.
+2. minimap.
+3. bygger nivå med bruk av tiled map editor hvor vi har 3 layers, objects (trær/vegetasjon), walls og ground.
+4. vi har kollisjon med vegger og at man ikke kan gå på vann.
+5. npc movement og dialog hvor man kan interacte med å trykke på "E".
+6. npc'er har en definert walk "path" og kan "vandre" rundt
+7. npc'er har 4 retninger de kan se utifra hvilken retning de står/går. og dette endrer seg også utifra hvor vi ser npc'en fra. Samme med spiller
+8. vi har et dialog vindu som kommer opp som bare blir brukt til dialog nå, men kan også bli brukt til andre ting senere. 
+9. inventory, equipment vindu, noen test items, sverd
+
+Jeg designer alt av sprites, textures, nivåer, dialoger. Jeg designer alt. 
+Det jeg trenger hjelp med er koding. Så når jeg sier at du skal fikse/lage noe med spillet,
+så trenger jeg konkrete endringer, jeg må få hva som må endres/legges til og hvor det skal være.
+Jeg sender deg spill filene, også tar du utgangspunkt i de. 
+
+jeg driver å gjør om spiller fra første person til tredjeperson, jeg trenger hjelp med å fikse ting som henger igjen. Sånn som når jeg equiper et sverd så ser man sverdet på høyre side av skjermen, det skal vi ikke lenger. Vi kan starte med det
+
+
+

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8" />
+  <title>VoidQuest Three Test</title>
+  <link rel="stylesheet" href="three-style.css" />
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://unpkg.com/three@0.165.0/build/three.module.js"
+      }
+    }
+  </script>
+</head>
+<body>
+  <div id="hud">
+    <div>WASD = gå | Shift = løp | klikk = lås mus | ESC = slipp mus</div>    <div id="fps">FPS: --</div>
+    <div id="playerStatsLine">STR: --</div>
+
+    <div class="hud-bar-row">
+      <span class="hud-bar-label">HP</span>
+      <div id="healthBarOuter">
+        <div id="healthBarInner"></div>
+      </div>
+    </div>
+
+    <div class="hud-bar-row">
+      <span class="hud-bar-label">STA</span>
+      <div id="staminaBarOuter">
+        <div id="staminaBarInner"></div>
+      </div>
+    </div>
+  </div>
+  
+  <canvas id="minimap"></canvas>
+
+  <div id="crosshair"></div>
+
+  <div id="damageFlash"></div> 
+
+  <div id="inventoryWindow" class="hidden">
+    <div id="inventoryGrid"></div>
+  </div>
+
+  <div id="equipmentWindow" class="hidden">
+    <div id="equipmentCharacterPreview"></div>
+
+    <div id="equipmentSlots">
+      <div class="equipment-slot equipment-slot-head" data-equip-slot="head"></div>
+      <div class="equipment-slot equipment-slot-chest" data-equip-slot="chest"></div>
+      <div class="equipment-slot equipment-slot-legs" data-equip-slot="legs"></div>
+      <div class="equipment-slot equipment-slot-feet" data-equip-slot="feet"></div>
+      <div class="equipment-slot equipment-slot-weapon" data-equip-slot="weapon"></div>
+    </div>
+  </div>
+
+  <div id="inventoryTooltip" class="hidden"></div>
+
+  <div id="containerWindow" class="hidden">
+    <div id="containerTitle"></div>
+    <div id="containerGrid"></div>
+  </div>
+
+  <div id="itemContextMenu" class="hidden"></div>
+
+  <div id="pauseMenu" class="hidden">
+    <div id="pausePanel">
+      <div id="pauseTitle">Game Menu</div>
+
+      <button id="saveGameButton">Save Game</button>
+      <button id="loadGameButton">Load Game</button>
+      <button id="closeMenuButton">Return</button>
+
+      <div id="saveSlotPanel" class="hidden">
+        <div id="saveSlotTitle">Choose slot</div>
+        <div id="saveSlots"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="dialogueBox" class="hidden">
+    <div id="dialogueName"></div>
+    <div id="dialogueText"></div>
+    <div id="dialogueHint">Trykk E for neste</div>
+  </div>
+
+  <script type="module" src="three-game.js"></script>
+</body>
+</html>

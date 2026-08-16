@@ -1,0 +1,504 @@
+body {
+  margin: 0;
+  overflow: hidden;
+  background: black;
+  font-family: Georgia, serif;
+}
+
+#hud {
+  position: fixed;
+  left: 16px;
+  top: 16px;
+  color: #d8c9a3;
+  background: rgba(0,0,0,0.55);
+  padding: 10px 14px;
+  border: 1px solid #5f5033;
+  z-index: 10;
+}
+
+#playerStatsLine {
+  margin-top: 4px;
+  color: #fff0b0;
+  font-size: 13px;
+}
+
+.hud-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 7px;
+}
+
+.hud-bar-label {
+  width: 32px;
+  font-size: 12px;
+  color: #fff0b0;
+}
+
+#healthBarOuter,
+#staminaBarOuter {
+  width: 180px;
+  height: 12px;
+  background: rgba(0, 0, 0, 0.65);
+  border: 1px solid #5f5033;
+}
+
+#healthBarInner,
+#staminaBarInner {
+  width: 100%;
+  height: 100%;
+  transition: width 0.08s linear;
+}
+
+#healthBarInner {
+  background: #c83232;
+}
+
+#staminaBarInner {
+  background: #2ecc40;
+}
+
+#minimap {
+  position: fixed;
+  right: 20px;
+  top: 20px;
+  width: 160px;
+  height: 160px;
+  background: rgba(0,0,0,0.65);
+  border: 2px solid #5f5033;
+  image-rendering: pixelated;
+  z-index: 20;
+}
+
+#dialogueBox {
+  position: fixed;
+  left: 50%;
+  bottom: 40px;
+  transform: translateX(-50%);
+  width: 620px;
+  max-width: calc(100vw - 40px);
+  min-height: 120px;
+  padding: 18px 22px;
+  background: rgba(8, 7, 10, 0.9);
+  border: 2px solid #5f5033;
+  color: #d8c9a3;
+  font-family: Georgia, serif;
+  z-index: 50;
+}
+
+#dialogueBox.hidden {
+  display: none;
+}
+
+#dialogueName {
+  font-weight: bold;
+  margin-bottom: 10px;
+  color: #fff0b0;
+}
+
+#dialogueText {
+  font-size: 18px;
+  line-height: 1.4;
+}
+
+#dialogueHint {
+  margin-top: 14px;
+  font-size: 13px;
+  opacity: 0.75;
+}
+
+#inventoryWindow {
+  position: fixed;
+  right: 40px;
+  bottom: 40px;
+  width: 456px;
+  height: 456px;
+  background-image: url("assets/ui/inventory-scroll.png");
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+  z-index: 60;
+}
+
+#inventoryWindow.hidden {
+  display: none;
+}
+
+#inventoryGrid {
+  position: absolute;
+  left: 78px;
+  top: 78px;
+  width: 300px;
+  height: 300px;
+
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(6, 1fr);
+  gap: 6px;
+}
+
+.inventory-slot {
+  position: relative;
+}
+
+.inventory-slot.drag-over {
+  outline: 1px solid rgba(255, 240, 170, 0.65);
+  outline-offset: -2px;
+}
+
+.inventory-item {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  cursor: grab;
+  user-select: none;
+}
+
+.inventory-item:active {
+  cursor: grabbing;
+}
+
+.inventory-count {
+  position: absolute;
+  right: 2px;
+  bottom: 0;
+  color: white;
+  font-size: 13px;
+  text-shadow: 1px 1px 0 black;
+  pointer-events: none;
+}
+
+#inventoryTooltip {
+  position: fixed;
+  padding: 8px 10px;
+  background: rgba(8, 7, 10, 0.92);
+  border: 1px solid #5f5033;
+  color: #d8c9a3;
+  font-size: 14px;
+  z-index: 200;
+  pointer-events: none;
+}
+
+#inventoryTooltip.hidden {
+  display: none;
+}
+
+#itemContextMenu {
+  position: fixed;
+  min-width: 120px;
+  background: rgba(8, 7, 10, 0.96);
+  border: 1px solid #5f5033;
+  color: #d8c9a3;
+  font-family: Georgia, serif;
+  font-size: 14px;
+  z-index: 100;
+}
+
+#itemContextMenu.hidden {
+  display: none;
+}
+
+.item-context-option {
+  padding: 7px 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.item-context-option:hover {
+  background: rgba(216, 201, 163, 0.18);
+  color: #fff0b0;
+}
+
+#containerWindow {
+  position: fixed;
+  left: 40px;
+  bottom: 40px;
+  width: 360px;
+  height: 300px;
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+  color: #d8c9a3;
+  font-family: Georgia, serif;
+  z-index: 46;
+}
+
+#containerWindow.hidden {
+  display: none;
+}
+
+#containerTitle {
+  position: absolute;
+  left: 28px;
+  top: 22px;
+  color: #fff0b0;
+  font-weight: bold;
+  text-shadow: 1px 1px 0 black;
+  pointer-events: none;
+}
+
+#containerGrid {
+  position: absolute;
+  left: 32px;
+  top: 58px;
+  width: 250px;
+  height: 190px;
+
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.container-slot {
+  position: relative;
+}
+
+.container-slot.drag-over {
+  outline: 1px solid rgba(255, 240, 170, 0.7);
+  outline-offset: -2px;
+}
+
+#pauseMenu {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#pauseMenu.hidden {
+  display: none;
+}
+
+#pausePanel {
+  width: 320px;
+  padding: 22px;
+  background: rgba(8, 7, 10, 0.94);
+  border: 2px solid #5f5033;
+  color: #d8c9a3;
+  font-family: Georgia, serif;
+}
+
+#pauseTitle {
+  margin-bottom: 16px;
+  color: #fff0b0;
+  font-size: 22px;
+  font-weight: bold;
+  text-align: center;
+}
+
+#pausePanel button,
+.save-slot-button {
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 10px;
+  background: rgba(60, 45, 25, 0.95);
+  border: 1px solid #9b843f;
+  color: #fff0b0;
+  font-family: Georgia, serif;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+#pausePanel button:hover,
+.save-slot-button:hover {
+  background: rgba(100, 75, 35, 0.95);
+}
+
+#saveSlotPanel {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #5f5033;
+}
+
+#saveSlotPanel.hidden {
+  display: none;
+}
+
+#saveSlotTitle {
+  margin-bottom: 10px;
+  color: #fff0b0;
+  font-weight: bold;
+}
+
+.save-slot-meta {
+  display: block;
+  margin-top: 4px;
+  color: #d8c9a3;
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+#equipmentWindow {
+  position: fixed;
+  right: 530px;
+  bottom: 40px;
+  width: 320px;
+  height: 456px;
+  background: rgba(8, 7, 10, 0.92);
+  border: 2px solid #5f5033;
+  color: #d8c9a3;
+  font-family: Georgia, serif;
+  z-index: 58;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+#equipmentWindow {
+  position: fixed;
+  left: 40px;
+  bottom: 40px;
+
+  width: 450px;
+  height: 450px;
+
+  background-image: url("assets/ui/equipment-window.png");
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  image-rendering: pixelated;
+
+  z-index: 58;
+  pointer-events: auto;
+}
+
+#equipmentWindow.hidden {
+  display: none;
+}
+
+#equipmentCharacterPreview {
+  position: absolute;
+
+  /* Stor karakter-rute */
+  left: 122px;
+  top: 75px;
+  width: 295px;
+  height: 250px;
+
+  pointer-events: none;
+}
+
+#equipmentSlots {
+  position: absolute;
+  inset: 0;
+}
+
+.equipment-slot {
+  position: absolute;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.equipment-slot-head {
+  left: 13px;
+  top: 14px;
+  width: 92px;
+  height: 92px;
+}
+
+.equipment-slot-chest {
+  left: 13px;
+  top: 124px;
+  width: 92px;
+  height: 92px;
+}
+
+.equipment-slot-legs {
+  left: 13px;
+  top: 234px;
+  width: 92px;
+  height: 92px;
+}
+
+.equipment-slot-feet {
+  left: 13px;
+  top: 348px;
+  width: 92px;
+  height: 82px;
+}
+
+.equipment-slot-weapon {
+  left: 125px;
+  top: 348px;
+  width: 92px;
+  height: 82px;
+}
+
+.equipment-item {
+  width: 58px;
+  height: 58px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  cursor: pointer;
+}
+
+.equipment-slot-weapon .equipment-item {
+  width: 62px;
+  height: 62px;
+}
+
+#damageFlash {
+  position: fixed;
+  inset: 0;
+  background: rgba(255, 0, 0, 0);
+  pointer-events: none;
+  z-index: 25;
+}
+
+#damageFlash.damage-flash-active {
+  animation: playerDamageFlash 0.22s ease-out;
+}
+
+@keyframes playerDamageFlash {
+  0% {
+    background: rgba(255, 0, 0, 0.18);
+  }
+
+  100% {
+    background: rgba(255, 0, 0, 0);
+  }
+}
+
+#crosshair {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  transform: translate(-50%, -50%);
+
+  pointer-events: none;
+  z-index: 30;
+
+  display: none;
+}
+
+body.mouse-locked #crosshair {
+  display: block;
+}
+
+#crosshair::before,
+#crosshair::after {
+  content: "";
+  position: absolute;
+  background: rgba(255, 240, 176, 0.9);
+}
+
+#crosshair::before {
+  width: 2px;
+  height: 14px;
+  left: 6px;
+  top: 0;
+}
+
+#crosshair::after {
+  width: 14px;
+  height: 2px;
+  left: 0;
+  top: 6px;
+}

@@ -1,0 +1,73 @@
+{
+    "Map/SizeTest": {
+        "height": 4300,
+        "width": 2
+    },
+    "activeFile": "overworld.json",
+    "expandedProjectPaths": [
+        "."
+    ],
+    "file.lastUsedOpenFilter": "All Files (*)",
+    "fileStates": {
+        "": {
+            "scaleInDock": 1
+        },
+        "C:/Users/espen/OneDrive/Skrivebord/progg/spill/voidquest-dungeons/assets/textures/dungeon-tiles.tsx": {
+            "dynamicWrapping": true,
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "C:/Users/espen/OneDrive/Skrivebord/progg/spill/voidquest-dungeons/assets/textures/dungeon_tiles.tsx": {
+            "dynamicWrapping": false,
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "C:/Users/espen/OneDrive/Skrivebord/progg/spill/voidquest-dungeons/assets/textures/game-tiles.tsx": {
+            "dynamicWrapping": false,
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "C:/Users/espen/OneDrive/Skrivebord/progg/spill/voidquest-dungeons/assets/textures/terrain-vegetation.tsx": {
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "C:/Users/espen/OneDrive/Skrivebord/progg/spill/voidquest-dungeons/assets/textures/terrain.tsx": {
+            "dynamicWrapping": true,
+            "scaleInDock": 1,
+            "scaleInEditor": 1
+        },
+        "overworld.json": {
+            "scale": 0.5,
+            "selectedLayer": 1,
+            "viewCenter": {
+                "x": 878,
+                "y": 796
+            }
+        },
+        "overworld.json#game-tiles": {
+            "dynamicWrapping": true
+        }
+    },
+    "last.exportedFilePath": "C:/Users/espen/OneDrive/Skrivebord/progg/spill/voidquest-dungeons/maps",
+    "last.externalTilesetPath": "C:/Users/espen/OneDrive/Skrivebord/progg/spill/voidquest-dungeons/assets/textures",
+    "last.imagePath": "C:/Users/espen/OneDrive/Skrivebord/progg/spill/voidquest-dungeons/assets/textures/house",
+    "map.height": 50,
+    "map.lastUsedExportFilter": "JSON map files (*.tmj *.json)",
+    "map.lastUsedFormat": "json",
+    "map.width": 50,
+    "openFiles": [
+        "overworld.json",
+        "C:/Users/espen/OneDrive/Skrivebord/progg/spill/voidquest-dungeons/assets/textures/game-tiles.tsx"
+    ],
+    "project": "vqd-dungeon-test-map.tiled-project",
+    "recentFiles": [
+        "C:/Users/espen/OneDrive/Skrivebord/progg/spill/voidquest-dungeons/assets/textures/game-tiles.tsx",
+        "overworld.json",
+        "C:/Users/espen/OneDrive/Skrivebord/progg/spill/voidquest-dungeons/assets/textures/terrain-vegetation.tsx",
+        "C:/Users/espen/OneDrive/Skrivebord/progg/spill/voidquest-dungeons/assets/textures/terrain.tsx",
+        "C:/Users/espen/OneDrive/Skrivebord/progg/spill/voidquest-dungeons/assets/textures/dungeon-tiles.tsx",
+        "C:/Users/espen/OneDrive/Skrivebord/progg/spill/voidquest-dungeons/assets/textures/dungeon_tiles.tsx"
+    ],
+    "tileset.lastUsedFormat": "tsx",
+    "tileset.type": 1
+}
