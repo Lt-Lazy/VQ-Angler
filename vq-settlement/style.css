@@ -522,3 +522,80 @@ body {
 #settlement-name-input:focus {
     border-color: #888;
 }
+
+/* =========================================================
+   BUILDING INFO POPUP
+   ========================================================= */
+
+#building-info-popup {
+    position: absolute;
+
+    display: none;
+
+    min-width: 190px;
+    max-width: 260px;
+
+    padding: 8px;
+
+    background: rgba(25, 25, 25, 0.96);
+
+    border: 2px solid #111;
+
+    box-shadow:
+        inset 1px 1px 0 #555,
+        inset -1px -1px 0 #111;
+
+    color: white;
+
+    font-family: monospace;
+    font-size: 11px;
+
+    line-height: 1.6;
+
+    z-index: 50;
+
+    pointer-events: none;
+}
+
+
+#building-info-popup.open {
+    display: block;
+}
+
+
+#building-info-title {
+    margin-bottom: 6px;
+    padding-bottom: 5px;
+
+    border-bottom: 1px solid #555;
+
+    font-size: 13px;
+    font-weight: bold;
+}
+
+
+.building-info-resident {
+    color: #d8d8d8;
+}
+
+.building-info-family {
+    margin-top: 8px;
+}
+
+.building-info-family-name {
+    margin-bottom: 3px;
+
+    color: #ffffff;
+
+    font-weight: bold;
+}
+
+.building-info-resident {
+    padding-left: 8px;
+
+    color: #d8d8d8;
+}
+
+.building-info-relation {
+    color: #999999;
+}

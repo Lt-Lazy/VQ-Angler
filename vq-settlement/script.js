@@ -113,6 +113,25 @@ const gameDayText =
 const gameTimeText =
     document.getElementById("game-time");
 
+const buildingInfoPopup =
+    document.getElementById(
+        "building-info-popup"
+    );
+
+const buildingInfoTitle =
+    document.getElementById(
+        "building-info-title"
+    );
+
+const buildingInfoContent =
+    document.getElementById(
+        "building-info-content"
+    );
+
+
+let activeInfoBuildingId =
+    null;
+
 
 /* =========================================================
    DEBUG UI
@@ -140,6 +159,20 @@ const debugNature =
 
 const MAP_URL =
     "assets/maps/settlement-map.tmj";
+
+const NAMES_URL =
+    "assets/data/names.json";
+
+
+let nameData = {
+
+    male: [],
+
+    female: [],
+
+    surnames: []
+
+};
 
 
 let tiledMap = null;
@@ -267,7 +300,14 @@ const BUILDING_DEFS = {
 
         },
 
-        foodPerDay: 10
+        jobType:
+            "Farmer",
+
+        workerSlots:
+            2,
+
+        foodPerDay:
+            10
 
     }
 
@@ -308,6 +348,11 @@ const worldState = {
 
     buildings: [],
 
+    settlers: [],
+    nextSettlerId: 1,
+    families: [],
+    nextFamilyId: 1,
+
     roads: {},
 
     /*
@@ -337,6 +382,9 @@ const SECONDS_PER_DAY =
 const MIN_FOOD_FOR_POPULATION_GROWTH =
     10;
 
+const MIN_WORKING_AGE =
+    16;
+
 const SAVE_KEY =
     "vq-settlement-save-v1";
 
@@ -350,6 +398,68 @@ let namingSettlement =
 /* =========================================================
    HELP FUNCTIONS
    ========================================================= */
+
+function randomInteger(
+    min,
+    max
+) {
+
+    return Math.floor(
+        Math.random() *
+        (max - min + 1)
+    ) + min;
+
+}
+
+
+function generateAgeForRelation(
+    relation
+) {
+
+    if (
+        relation === "Son" ||
+        relation === "Daughter"
+    ) {
+
+        return randomInteger(
+            2,
+            15
+        );
+
+    }
+
+
+    if (
+        relation === "Father" ||
+        relation === "Mother"
+    ) {
+
+        return randomInteger(
+            25,
+            55
+        );
+
+    }
+
+
+    return randomInteger(
+        18,
+        60
+    );
+
+}
+
+
+function canSettlerWork(
+    settler
+) {
+
+    return (
+        settler.age >=
+        MIN_WORKING_AGE
+    );
+
+}
 
 function drawRoads() {
 
@@ -387,6 +497,99 @@ function drawRoads() {
         );
 
     }
+
+}
+
+function getRandomArrayItem(
+    array
+) {
+
+    if (
+        !Array.isArray(array) ||
+        array.length === 0
+    ) {
+
+        return null;
+
+    }
+
+
+    const index =
+        Math.floor(
+            Math.random() *
+            array.length
+        );
+
+
+    return array[index];
+
+}
+
+
+function getRandomGender() {
+
+    return (
+        Math.random() < 0.5
+            ? "male"
+            : "female"
+    );
+
+}
+
+
+function generateSettlerIdentity(
+    id,
+    gender = null,
+    lastName = null
+) {
+
+    const selectedGender =
+        gender ||
+        getRandomGender();
+
+
+    const firstNamePool =
+        selectedGender === "female"
+            ? nameData.female
+            : nameData.male;
+
+
+    const firstName =
+        getRandomArrayItem(
+            firstNamePool
+        ) ||
+        `Settler ${id}`;
+
+
+    const selectedLastName =
+        lastName ||
+        getRandomArrayItem(
+            nameData.surnames
+        ) ||
+        "";
+
+
+    const fullName =
+        selectedLastName
+            ? `${firstName} ${selectedLastName}`
+            : firstName;
+
+
+    return {
+
+        gender:
+            selectedGender,
+
+        firstName:
+            firstName,
+
+        lastName:
+            selectedLastName,
+
+        fullName:
+            fullName
+
+    };
 
 }
 
@@ -768,6 +971,29 @@ function saveGame() {
             ...worldState.removedNature
         },
 
+        settlers:
+            worldState.settlers.map(
+                settler => ({
+                    ...settler
+                })
+            ),
+
+        nextSettlerId:
+            worldState.nextSettlerId,
+
+        families:
+            worldState.families.map(
+                family => ({
+                    ...family,
+
+                    memberIds: [
+                        ...family.memberIds
+                    ]
+                })
+            ),
+
+        nextFamilyId:
+            worldState.nextFamilyId,
 
         camera: {
 
@@ -885,6 +1111,131 @@ function loadGame() {
                 ? saveData.buildings
                 : [];
 
+
+        worldState.settlers =
+            Array.isArray(
+                saveData.settlers
+            )
+                ? saveData.settlers.map(
+                    settler => ({
+                        ...settler
+                    })
+                )
+                : [];
+
+        for (
+            const settler
+            of worldState.settlers
+        ) {
+
+            if (
+                !settler.firstName ||
+                !settler.gender
+            ) {
+
+                const identity =
+                    generateSettlerIdentity(
+                        settler.id
+                    );
+
+
+                settler.firstName =
+                    identity.firstName;
+
+                settler.lastName =
+                    identity.lastName;
+
+                settler.name =
+                    identity.fullName;
+
+                settler.gender =
+                    identity.gender;
+
+            }
+
+            if (
+                !Number.isFinite(
+                    settler.age
+                )
+            ) {
+
+                settler.age =
+                    generateAgeForRelation(
+                        settler.relation
+                    );
+
+            }
+
+        }
+
+        worldState.nextSettlerId =
+            Number.isInteger(
+                saveData.nextSettlerId
+            )
+                ? saveData.nextSettlerId
+                : 1;
+
+        for (
+            const settler
+            of worldState.settlers
+        ) {
+
+            if (
+                settler.id >=
+                worldState.nextSettlerId
+            ) {
+
+                worldState.nextSettlerId =
+                    settler.id + 1;
+
+            }
+
+        }
+
+        worldState.families =
+            Array.isArray(
+                saveData.families
+            )
+                ? saveData.families.map(
+                    family => ({
+                        ...family,
+
+                        memberIds:
+                            Array.isArray(
+                                family.memberIds
+                            )
+                                ? [...family.memberIds]
+                                : []
+                    })
+                )
+                : [];
+
+
+        worldState.nextFamilyId =
+            Number.isInteger(
+                saveData.nextFamilyId
+            )
+                ? saveData.nextFamilyId
+                : 1;
+
+        for (
+            const family
+            of worldState.families
+        ) {
+
+            if (
+                family.id >=
+                worldState.nextFamilyId
+            ) {
+
+                worldState.nextFamilyId =
+                    family.id + 1;
+
+            }
+
+        }
+
+        syncPopulationCount();
 
         /*
             Removed nature
@@ -1045,7 +1396,17 @@ function newGame() {
     worldState.buildings =
         [];
 
+    worldState.settlers =
+        [];
 
+    worldState.nextSettlerId =
+        1;
+
+    worldState.families =
+        [];
+
+    worldState.nextFamilyId =
+        1;
 
     worldState.removedNature =
         {};
@@ -1197,6 +1558,58 @@ async function loadJSON(url) {
 
 
     return await response.json();
+
+}
+
+async function loadNameData() {
+
+    try {
+
+        const namesURL =
+            new URL(
+                NAMES_URL,
+                window.location.href
+            ).href;
+
+
+        const loaded =
+            await loadJSON(
+                namesURL
+            );
+
+
+        nameData.male =
+            Array.isArray(loaded.male)
+                ? loaded.male
+                : [];
+
+
+        nameData.female =
+            Array.isArray(loaded.female)
+                ? loaded.female
+                : [];
+
+
+        nameData.surnames =
+            Array.isArray(loaded.surnames)
+                ? loaded.surnames
+                : [];
+
+
+        console.log(
+            "Names loaded:",
+            nameData
+        );
+
+    }
+    catch (error) {
+
+        console.error(
+            "Could not load names:",
+            error
+        );
+
+    }
 
 }
 
@@ -2695,16 +3108,84 @@ canvas.addEventListener(
 
         event.preventDefault();
 
+        /*
+            Under bygging brukes høyreklikk
+            fortsatt til å avbryte verktøyet.
+        */
 
         if (buildMode) {
 
             cancelBuildMode();
+
+            closeBuildingInfo();
+
+            return;
 
         }
 
         if (harvestMode) {
 
             cancelHarvestMode();
+
+            closeBuildingInfo();
+
+            return;
+
+        }
+
+        /*
+
+            Building info brukes kun
+            i vanlig spillmodus.
+        */
+
+        if (buildModeActive) {
+
+            closeBuildingInfo();
+
+            return;
+
+        }
+
+        const building =
+            getBuildingAtTile(
+                mouse.tileX,
+                mouse.tileY
+            );
+
+
+        if (!building) {
+
+            closeBuildingInfo();
+
+            return;
+
+        }
+
+        openBuildingInfo(
+            building,
+            mouse.screenX,
+            mouse.screenY
+        );
+
+    }
+);
+
+document.addEventListener(
+    "mousedown",
+    (event) => {
+
+        /*
+            Venstreklikk hvor som helst
+            lukker Building Info.
+        */
+
+        if (
+            event.button === 0 &&
+            activeInfoBuildingId !== null
+        ) {
+
+            closeBuildingInfo();
 
         }
 
@@ -2781,6 +3262,291 @@ function buildingOccupiesTile(
         tileX < building.x + building.width &&
         tileY >= building.y &&
         tileY < building.y + building.height
+    );
+
+}
+
+function getBuildingAtTile(
+    tileX,
+    tileY
+) {
+
+    return (
+        worldState.buildings.find(
+            building =>
+                buildingOccupiesTile(
+                    building,
+                    tileX,
+                    tileY
+                )
+        ) || null
+    );
+
+}
+
+function closeBuildingInfo() {
+
+    activeInfoBuildingId =
+        null;
+
+
+    buildingInfoPopup.classList.remove(
+        "open"
+    );
+
+}
+
+function openBuildingInfo(
+    building,
+    screenX,
+    screenY
+) {
+
+    const def =
+        BUILDING_DEFS[
+            building.type
+        ];
+
+
+    if (!def) {
+        return;
+    }
+
+    /*
+        Høyreklikk samme bygning igjen
+        lukker popupen.
+    */
+
+    if (
+        activeInfoBuildingId ===
+        building.id
+    ) {
+
+        closeBuildingInfo();
+
+        return;
+
+    }
+
+    activeInfoBuildingId =
+        building.id;
+
+
+    buildingInfoTitle.textContent =
+        def.name;
+
+
+    const residents =
+        worldState.settlers.filter(
+            settler =>
+                settler.homeId ===
+                building.id
+        );
+
+    let html =
+        "";
+
+
+    /*
+        Boligbygninger.
+    */
+
+    if (
+        def.housingCapacity
+    ) {
+
+        html +=
+            `Residents: ${residents.length} / ${def.housingCapacity}`;
+
+
+        if (
+            residents.length > 0
+        ) {
+
+            /*
+                Samle beboerne etter familie.
+            */
+
+            const familyGroups =
+                new Map();
+
+
+            for (
+                const settler
+                of residents
+            ) {
+
+                const familyId =
+                    settler.familyId ??
+                    `single-${settler.id}`;
+
+
+                if (
+                    !familyGroups.has(
+                        familyId
+                    )
+                ) {
+
+                    familyGroups.set(
+                        familyId,
+                        []
+                    );
+
+                }
+
+
+                familyGroups
+                    .get(familyId)
+                    .push(settler);
+
+            }
+
+
+            /*
+                Tegn hver familie.
+            */
+
+            for (
+                const [
+                    familyId,
+                    members
+                ]
+                of familyGroups
+            ) {
+
+                html +=
+                    `<div class="building-info-family">`;
+
+
+                if (
+                    typeof familyId ===
+                    "number"
+                ) {
+
+                    const family =
+                        getFamilyById(
+                            familyId
+                        );
+
+
+                    const familyName =
+                        family
+                            ? `${family.lastName} Family`
+                            : "Family";
+
+
+                    html +=
+                        `<div class="building-info-family-name">${familyName}</div>`;
+
+                }
+                else {
+
+                    html +=
+                        `<div class="building-info-family-name">Resident</div>`;
+
+                }
+
+
+                for (
+                    const settler
+                    of members
+                ){
+
+                    const relation =
+                        settler.relation
+                            ? ` — ${settler.relation}`
+                            : "";
+
+
+                    const age =
+                        Number.isFinite(
+                            settler.age
+                        )
+                            ? ` — Age ${settler.age}`
+                            : "";
+
+                    html +=
+                        `
+                        <div class="building-info-resident">
+                            ${settler.name}
+                            <span class="building-info-relation">
+                                ${relation}${age}
+                            </span>
+                        </div>
+                        `;
+
+                }
+
+                html +=
+                    `</div>`;
+
+            }
+
+        }
+        else {
+
+            html +=
+                "<br><br>No residents.";
+
+        }
+
+    }
+
+    /*
+        Fremtidige systemer.
+    */
+
+    html +=
+        "<br><br>Built: -";
+
+    html +=
+        "<br>Food Storage: -";
+
+    html +=
+        "<br>Happiness: -";
+
+    if (
+        def.workerSlots
+    ) {
+
+        const workers =
+            getBuildingWorkers(
+                building.id
+            );
+
+
+        html +=
+            `<br><br>Workers: ${workers.length} / ${def.workerSlots}`;
+
+
+        for (
+            const worker
+            of workers
+        ) {
+
+            html +=
+                `<div class="building-info-resident">
+                    ${worker.name} — ${worker.job}
+                </div>`;
+
+        }
+
+    }
+
+
+    buildingInfoContent.innerHTML =
+        html;
+
+
+    buildingInfoPopup.style.left =
+        `${screenX + 12}px`;
+
+    buildingInfoPopup.style.top =
+        `${screenY + 12}px`;
+
+
+    buildingInfoPopup.classList.add(
+        "open"
     );
 
 }
@@ -3121,6 +3887,10 @@ function placeBuilding(
         building
     );
 
+    assignAvailableJobs();
+
+    assignHomesToUnhousedSettlers();
+
     payBuildingCost(
         def
     );
@@ -3137,9 +3907,10 @@ function placeBuilding(
             "Unnamed Settlement";
 
 
-        worldState.settlement.population =
-            5;
-
+        createFamily(
+            5,
+            building.id
+        );
 
         worldState.resources.food =
             25;
@@ -3967,61 +4738,579 @@ function processNewDay() {
                 building.type
             ];
 
-
         if (!def) {
             continue;
         }
 
+        if (
+            def.foodPerDay &&
+            def.workerSlots
+        ) {
 
-        foodProduced +=
-            def.foodPerDay || 0;
+            const workers =
+                getBuildingWorkers(
+                    building.id
+                );
+
+
+            const workerRatio =
+                workers.length /
+                def.workerSlots;
+
+
+            foodProduced +=
+                Math.floor(
+                    def.foodPerDay *
+                    workerRatio
+                );
+
+        }
 
     }
 
     const foodConsumed =
-        worldState.settlement.population;
+        getPopulation();
 
+        worldState.resources.food +=
+            foodProduced;
 
-    worldState.resources.food +=
-        foodProduced;
+        worldState.resources.food -=
+            foodConsumed;
 
-
-    worldState.resources.food =
-        Math.max(
-            0,
-            worldState.resources.food
-        );
-
+        worldState.resources.food =
+            Math.max(
+                0,
+                worldState.resources.food
+            );
 
     processPopulationGrowth();
-
 
     console.log(
         `Day ${worldState.time.day}: +${foodProduced} Food, -${foodConsumed} Food`
     );
 
-
     updateSettlementUI();
 
 }
 
-function processPopulationGrowth() {
+function getPopulation() {
 
-    const population =
-        worldState.settlement.population;
+    return worldState.settlers.length;
+
+}
 
 
-    const capacity =
-        getPopulationCapacity();
+function syncPopulationCount() {
+
+    /*
+        Beholder population-feltet foreløpig
+        for kompatibilitet med resten av spillet.
+    */
+
+    worldState.settlement.population =
+        getPopulation();
+
+}
+
+function createSettler(
+    options = {}
+) {
+
+    const id =
+        worldState.nextSettlerId;
+
+
+    worldState.nextSettlerId +=
+        1;
+
+
+    const identity =
+        generateSettlerIdentity(
+            id,
+            options.gender || null,
+            options.lastName || null
+        );
+
+
+    const settler = {
+
+        id:
+            id,
+
+        firstName:
+            identity.firstName,
+
+        lastName:
+            identity.lastName,
+
+        name:
+            identity.fullName,
+
+        gender:
+            identity.gender,
+
+        homeId:
+            options.homeId ?? null,
+
+        familyId:
+            options.familyId ?? null,
+
+        relation:
+            options.relation ?? null,
+
+        age:
+            options.age ??
+            generateAgeForRelation(
+                options.relation ?? null
+            ),
+
+        job:
+            null,
+
+        workplaceId:
+            null,
+
+        arrivedDay:
+            worldState.time.day
+
+    };
+
+
+    worldState.settlers.push(
+        settler
+    );
+
+
+    assignHomeToSettler(
+        settler
+    );
+
+
+    syncPopulationCount();
+
+
+    console.log(
+        "Settler created:",
+        settler
+    );
+
+
+    return settler;
+
+}
+
+function getBuildingWorkers(
+    buildingId
+) {
+
+    return worldState.settlers.filter(
+        settler =>
+            settler.workplaceId ===
+            buildingId
+    );
+
+}
+
+
+function getBuildingFreeWorkerSlots(
+    building
+) {
+
+    const def =
+        BUILDING_DEFS[
+            building.type
+        ];
 
 
     if (
-        population >= capacity
+        !def ||
+        !def.workerSlots
+    ) {
+
+        return 0;
+
+    }
+
+
+    const workers =
+        getBuildingWorkers(
+            building.id
+        );
+
+
+    return Math.max(
+        0,
+        def.workerSlots -
+        workers.length
+    );
+
+}
+
+
+function assignAvailableJobs() {
+
+    /*
+        Finn voksne uten jobb.
+    */
+
+    const unemployed =
+        worldState.settlers.filter(
+            settler =>
+                canSettlerWork(settler) &&
+                settler.workplaceId === null
+        );
+
+
+    for (
+        const settler
+        of unemployed
+    ) {
+
+        for (
+            const building
+            of worldState.buildings
+        ) {
+
+            const def =
+                BUILDING_DEFS[
+                    building.type
+                ];
+
+
+            if (
+                !def ||
+                !def.workerSlots ||
+                !def.jobType
+            ) {
+
+                continue;
+
+            }
+
+
+            if (
+                getBuildingFreeWorkerSlots(
+                    building
+                ) <= 0
+            ) {
+
+                continue;
+
+            }
+
+
+            settler.job =
+                def.jobType;
+
+
+            settler.workplaceId =
+                building.id;
+
+
+            console.log(
+                `${settler.name} is now working as ${def.jobType}.`
+            );
+
+
+            break;
+
+        }
+
+    }
+
+}
+
+function getFamilyById(
+    familyId
+) {
+
+    return (
+        worldState.families.find(
+            family =>
+                family.id === familyId
+        ) || null
+    );
+
+}
+
+
+function findHomeForFamily(
+    familySize
+) {
+
+    for (
+        const building
+        of worldState.buildings
+    ) {
+
+        const freeHousing =
+            getBuildingFreeHousing(
+                building
+            );
+
+
+        if (
+            freeHousing >= familySize
+        ) {
+
+            return building;
+
+        }
+
+    }
+
+
+    return null;
+
+}
+
+
+function getLargestAvailableHome() {
+
+    let largest =
+        0;
+
+
+    for (
+        const building
+        of worldState.buildings
+    ) {
+
+        const freeHousing =
+            getBuildingFreeHousing(
+                building
+            );
+
+
+        largest =
+            Math.max(
+                largest,
+                freeHousing
+            );
+
+    }
+
+
+    return largest;
+
+}
+
+
+function createFamily(
+    size,
+    homeId
+) {
+
+    const familyId =
+        worldState.nextFamilyId;
+
+
+    worldState.nextFamilyId +=
+        1;
+
+
+    const lastName =
+        getRandomArrayItem(
+            nameData.surnames
+        ) ||
+        `Family${familyId}`;
+
+
+    const family = {
+
+        id:
+            familyId,
+
+        lastName:
+            lastName,
+
+        homeId:
+            homeId,
+
+        memberIds: [],
+
+        foundedDay:
+            worldState.time.day
+
+    };
+
+
+    worldState.families.push(
+        family
+    );
+
+    /*
+        Én person = single household.
+    */
+
+    if (
+        size === 1
+    ) {
+
+        const gender =
+            getRandomGender();
+
+
+        const settler =
+            createSettler({
+
+                gender:
+                    gender,
+
+                lastName:
+                    lastName,
+
+                familyId:
+                    familyId,
+
+                homeId:
+                    homeId,
+
+                relation:
+                    "Head"
+
+            });
+
+
+        family.memberIds.push(
+            settler.id
+        );
+
+        assignAvailableJobs();
+
+        return family;
+
+    }
+
+    /*
+        To voksne.
+    */
+
+    const father =
+        createSettler({
+
+            gender:
+                "male",
+
+            lastName:
+                lastName,
+
+            familyId:
+                familyId,
+
+            homeId:
+                homeId,
+
+            relation:
+                "Father"
+
+        });
+
+    family.memberIds.push(
+        father.id
+    );
+
+    const mother =
+        createSettler({
+
+            gender:
+                "female",
+
+            lastName:
+                lastName,
+
+            familyId:
+                familyId,
+
+            homeId:
+                homeId,
+
+            relation:
+                "Mother"
+
+        });
+
+    family.memberIds.push(
+        mother.id
+    );
+
+    /*
+        Eventuelle barn.
+    */
+
+    for (
+        let i = 2;
+        i < size;
+        i++
+    ) {
+
+        const gender =
+            getRandomGender();
+
+
+        const child =
+            createSettler({
+
+                gender:
+                    gender,
+
+                lastName:
+                    lastName,
+
+                familyId:
+                    familyId,
+
+                homeId:
+                    homeId,
+
+                relation:
+                    gender === "male"
+                        ? "Son"
+                        : "Daughter"
+
+            });
+
+        family.memberIds.push(
+            child.id
+        );
+
+    }
+
+    assignAvailableJobs();
+
+    console.log(
+        `${lastName} family created:`,
+        family
+    );
+
+
+    return family;
+
+}
+
+
+
+function processPopulationGrowth() {
+
+    const largestAvailableHome =
+        getLargestAvailableHome();
+
+    /*
+        Ingen ledig bolig.
+    */
+
+    if (
+        largestAvailableHome <= 0
     ) {
 
         return;
 
     }
+
+    /*
+        Krev fortsatt litt mat
+        før nye folk flytter inn.
+    */
 
     if (
         worldState.resources.food <
@@ -4032,12 +5321,45 @@ function processPopulationGrowth() {
 
     }
 
-    worldState.settlement.population +=
-        1;
+    /*
+        Household kan bestå av
+        1 til 5 personer.
+
+        Det blir aldri større enn
+        boligen vi faktisk har plass i.
+    */
+
+    const maxFamilySize =
+        Math.min(
+            5,
+            largestAvailableHome
+        );
+
+    const familySize =
+        1 +
+        Math.floor(
+            Math.random() *
+            maxFamilySize
+        );
+
+    const home =
+        findHomeForFamily(
+            familySize
+        );
+
+    if (!home) {
+        return;
+    }
+
+    const family =
+        createFamily(
+            familySize,
+            home.id
+        );
 
 
     console.log(
-        "A new settler has arrived."
+        `${family.lastName} family has arrived with ${familySize} member(s).`
     );
 
 }
@@ -4135,6 +5457,126 @@ function getPopulationCapacity() {
 
 }
 
+function getBuildingResidents(
+    buildingId
+) {
+
+    return worldState.settlers.filter(
+        settler =>
+            settler.homeId === buildingId
+    );
+
+}
+
+
+function getBuildingFreeHousing(
+    building
+) {
+
+    const def =
+        BUILDING_DEFS[
+            building.type
+        ];
+
+
+    if (
+        !def ||
+        !def.housingCapacity
+    ) {
+
+        return 0;
+
+    }
+
+
+    const residents =
+        getBuildingResidents(
+            building.id
+        );
+
+
+    return Math.max(
+        0,
+        def.housingCapacity -
+        residents.length
+    );
+
+}
+
+function assignHomeToSettler(
+    settler
+) {
+
+    /*
+        Har allerede et hjem.
+    */
+
+    if (
+        settler.homeId !== null
+    ) {
+
+        return true;
+
+    }
+
+    for (
+        const building
+        of worldState.buildings
+    ) {
+
+        const freeHousing =
+            getBuildingFreeHousing(
+                building
+            );
+
+        if (
+            freeHousing <= 0
+        ) {
+
+            continue;
+
+        }
+
+        settler.homeId =
+            building.id;
+
+        console.log(
+            `${settler.name} moved into ${building.type} #${building.id}`
+        );
+
+        return true;
+
+    }
+
+    console.log(
+        `${settler.name} has no home.`
+    );
+
+    return false;
+
+}
+
+function assignHomesToUnhousedSettlers() {
+
+    for (
+        const settler
+        of worldState.settlers
+    ) {
+
+        if (
+            settler.homeId === null
+        ) {
+
+            assignHomeToSettler(
+                settler
+            );
+
+        }
+
+    }
+
+}
+
 function updateClockUI() {
 
     const dayProgress =
@@ -4171,7 +5613,7 @@ function updateSettlementUI() {
 
 
     settlementPopulationText.textContent =
-        `${worldState.settlement.population} / ${populationCapacity}`;
+        `${getPopulation()} / ${populationCapacity}`;
 
 
     resourceFoodText.textContent =
@@ -4324,7 +5766,7 @@ async function startGame() {
         "Starting VQ Settlement..."
     );
 
-
+    await loadNameData();
     await loadTiledMap();
 
     updateSettlementUI();
