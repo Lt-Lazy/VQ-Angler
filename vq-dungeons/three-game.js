@@ -127,6 +127,13 @@ const tileMaterials = {
     side: THREE.DoubleSide
   }),
 
+  7: new THREE.MeshBasicMaterial({
+    map: loadPixelTexture("assets/textures/tree-1-bottom.png"),
+    transparent: true,
+    alphaTest: 0.5,
+    side: THREE.DoubleSide
+  }),
+
   12: new THREE.MeshBasicMaterial({
     map: loadPixelTexture("assets/textures/house/plank-wall32x96.png")
   }),
@@ -879,6 +886,30 @@ function getTileMaterialFromDef(tileDef, fallbackMaterial) {
   return materialCache[path];
 }
 
+function getObjectMaterialFromDef(tileDef, fallbackMaterial) {
+  if (!tileDef?.texture) {
+    return fallbackMaterial;
+  }
+
+  const path =
+    `assets/textures/${tileDef.texture}.png`;
+
+  const cacheKey =
+    `object:${path}`;
+
+  if (!materialCache[cacheKey]) {
+    materialCache[cacheKey] =
+      new THREE.MeshBasicMaterial({
+        map: getTexture(path),
+        transparent: true,
+        alphaTest: 0.5,
+        side: THREE.DoubleSide
+      });
+  }
+
+  return materialCache[cacheKey];
+}
+
 
 function createPlayerLayerMesh(layerConfig) {
   const mat = new THREE.MeshBasicMaterial({
@@ -1310,10 +1341,14 @@ async function loadTiledMap(path) {
 
         if (objectTile !== 0) {
 
-          const objectMat =
-            tileMaterials[objectTile] ||
-            tileMaterials[6];
+        const objectDefFromTiled =
+          tileDefs[objectTile];
 
+        const objectMat =
+          getObjectMaterialFromDef(
+            objectDefFromTiled,
+            tileMaterials[6]
+          );
 
           const spriteGeo =
             new THREE.PlaneGeometry(
