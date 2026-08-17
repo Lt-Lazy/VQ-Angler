@@ -128,6 +128,16 @@ const buildingInfoContent =
         "building-info-content"
     );
 
+const buildCategoryResourcesButton =
+    document.getElementById(
+        "build-category-resources"
+    );
+
+const lumberMillButton =
+    document.getElementById(
+        "tool-lumber-mill"
+    );
+
 
 let activeInfoBuildingId =
     null;
@@ -187,6 +197,15 @@ let mapLoaded = false;
 
 
 const loadedTilesets = [];
+
+const LUMBER_TREE_GROW_MIN_DAYS =
+    3;
+
+const LUMBER_TREE_GROW_MAX_DAYS =
+    7;
+
+const LUMBER_WOOD_PER_TREE =
+    5;
 
 
 /* =========================================================
@@ -309,6 +328,32 @@ const BUILDING_DEFS = {
         foodPerDay:
             10
 
+    },
+
+    lumberMill: {
+
+        name: "Lumber Mill",
+
+        label: "LUMBER",
+
+        width: 1,
+        height: 1,
+
+        cost: {
+
+            wood: 30
+
+        },
+
+        jobType:
+            "Lumberjack",
+
+        workerSlots:
+            1,
+
+        forestryRadius:
+            2
+
     }
 
 };
@@ -354,6 +399,7 @@ const worldState = {
     nextFamilyId: 1,
 
     roads: {},
+    grownTrees: {},
 
     /*
         Natur som spilleren har fjernet.
@@ -411,6 +457,594 @@ function randomInteger(
 
 }
 
+function getLoadedTileByName(
+    name
+) {
+
+    for (
+        const tileset
+        of loadedTilesets
+    ) {
+
+        for (
+            const tile
+            of tileset.tiles.values()
+        ) {
+
+            if (
+                tile.properties.name ===
+                name
+            ) {
+
+                return tile;
+
+            }
+
+        }
+
+    }
+
+
+    return null;
+
+}
+
+
+function drawGrownTrees() {
+
+    const treeTile =
+        getLoadedTileByName(
+            "tree"
+        );
+
+
+    if (!treeTile) {
+        return;
+    }
+
+
+    for (
+        const key
+        of Object.keys(
+            worldState.grownTrees
+        )
+    ) {
+
+        if (
+            worldState.grownTrees[key] !==
+            true
+        ) {
+
+            continue;
+
+        }
+
+
+        const [
+            x,
+            y
+        ] =
+            key
+                .split(",")
+                .map(Number);
+
+
+        ctx.drawImage(
+            treeTile.image,
+
+            x * tileWidth,
+
+            y * tileHeight,
+
+            treeTile.width,
+
+            treeTile.height
+        );
+
+    }
+
+}
+
+function processLumberMills() {
+
+    let woodProduced =
+        0;
+
+
+    for (
+        const building
+        of worldState.buildings
+    ) {
+
+        /*
+            Bare Lumber Mills.
+        */
+
+        if (
+            building.type !==
+            "lumberMill"
+        ) {
+
+            continue;
+
+        }
+
+
+        const workers =
+            getBuildingWorkers(
+                building.id
+            );
+
+
+        /*
+            Ingen Lumberjack =
+            ingen hogst eller planting.
+        */
+
+        if (
+            workers.length <= 0
+        ) {
+
+            continue;
+
+        }
+
+
+        /*
+            Sørg for at bygningen har
+            growth-data.
+        */
+
+        if (
+            !building.treeGrowth ||
+            typeof building.treeGrowth !==
+            "object"
+        ) {
+
+            building.treeGrowth =
+                {};
+
+        }
+
+
+        const tiles =
+            getLumberZoneTiles(
+                building
+            );
+
+
+        /* =================================================
+           HOGG TRÆR
+           ================================================= */
+
+        const availableTrees =
+            tiles.filter(
+                tile =>
+                    hasTreeAt(
+                        tile.x,
+                        tile.y
+                    )
+            );
+
+
+        /*
+            Én worker kan hogge
+            ett tre per dag.
+        */
+
+        const harvestAmount =
+            Math.min(
+                workers.length,
+                availableTrees.length
+            );
+
+
+        for (
+            let i = 0;
+            i < harvestAmount;
+            i++
+        ) {
+
+            /*
+                Velg et tilfeldig tre
+                i forestry-området.
+            */
+
+            const index =
+                Math.floor(
+                    Math.random() *
+                    availableTrees.length
+                );
+
+
+            const tree =
+                availableTrees.splice(
+                    index,
+                    1
+                )[0];
+
+
+            removeTreeAt(
+                tree.x,
+                tree.y
+            );
+
+
+            const key =
+                getTileKey(
+                    tree.x,
+                    tree.y
+                );
+
+
+            /*
+                Fjern eventuell gammel
+                growth-timer.
+
+                Neste growth-pass vil gi
+                denne plassen en ny tilfeldig
+                veksttid.
+            */
+
+            delete building.treeGrowth[
+                key
+            ];
+
+
+            woodProduced +=
+                LUMBER_WOOD_PER_TREE;
+
+        }
+
+
+        /* =================================================
+           LA NYE TRÆR GRO
+           ================================================= */
+
+        for (
+            const tile
+            of tiles
+        ) {
+
+            /*
+                Det står allerede et tre her.
+            */
+
+            if (
+                hasTreeAt(
+                    tile.x,
+                    tile.y
+                )
+            ) {
+
+                continue;
+
+            }
+
+
+            /*
+                Kan ikke gro på f.eks.
+                bygning, vei, stein eller vann.
+            */
+
+            if (
+                !canGrowTreeAt(
+                    tile.x,
+                    tile.y
+                )
+            ) {
+
+                continue;
+
+            }
+
+
+            const key =
+                getTileKey(
+                    tile.x,
+                    tile.y
+                );
+
+
+            /*
+                Ingen growth-timer ennå.
+
+                Gi akkurat denne plassen
+                tilfeldig 3–7 dager.
+            */
+
+            if (
+                !Number.isFinite(
+                    building.treeGrowth[
+                        key
+                    ]
+                )
+            ) {
+
+                building.treeGrowth[
+                    key
+                ] =
+                    randomInteger(
+                        LUMBER_TREE_GROW_MIN_DAYS,
+                        LUMBER_TREE_GROW_MAX_DAYS
+                    );
+
+
+                continue;
+
+            }
+
+
+            /*
+                Én dag nærmere et
+                ferdig tre.
+            */
+
+            building.treeGrowth[
+                key
+            ] -=
+                1;
+
+
+            /*
+                Treet er ferdig utvokst.
+            */
+
+            if (
+                building.treeGrowth[
+                    key
+                ] <= 0
+            ) {
+
+                worldState.grownTrees[
+                    key
+                ] =
+                    true;
+
+
+                delete building.treeGrowth[
+                    key
+                ];
+
+            }
+
+        }
+
+    }
+
+
+    /*
+        Legg dagens wood-produksjon
+        til settlementen.
+    */
+
+    worldState.resources.wood +=
+        woodProduced;
+
+
+    return woodProduced;
+
+}
+
+function hasTreeAt(
+    x,
+    y
+) {
+
+    const key =
+        getTileKey(
+            x,
+            y
+        );
+
+
+    if (
+        worldState.grownTrees[key] ===
+        true
+    ) {
+
+        return true;
+
+    }
+
+
+    if (
+        isNatureRemoved(
+            x,
+            y
+        )
+    ) {
+
+        return false;
+
+    }
+
+
+    return (
+        getTileName(
+            "nature",
+            x,
+            y
+        ) === "tree"
+    );
+
+}
+
+
+function removeTreeAt(
+    x,
+    y
+) {
+
+    const key =
+        getTileKey(
+            x,
+            y
+        );
+
+
+    if (
+        worldState.grownTrees[key] ===
+        true
+    ) {
+
+        delete worldState.grownTrees[
+            key
+        ];
+
+        return;
+
+    }
+
+
+    if (
+        getTileName(
+            "nature",
+            x,
+            y
+        ) === "tree"
+    ) {
+
+        removeNatureAt(
+            x,
+            y
+        );
+
+    }
+
+}
+
+function getLumberZoneTiles(
+    building
+) {
+
+    const zone =
+        getLumberZoneBounds(
+            building
+        );
+
+
+    const tiles =
+        [];
+
+
+    for (
+        let y = zone.minY;
+        y <= zone.maxY;
+        y++
+    ) {
+
+        for (
+            let x = zone.minX;
+            x <= zone.maxX;
+            x++
+        ) {
+
+            tiles.push({
+                x,
+                y
+            });
+
+        }
+
+    }
+
+
+    return tiles;
+
+}
+
+function canGrowTreeAt(
+    x,
+    y
+) {
+
+    /*
+        Bygninger blokkerer.
+    */
+
+    if (
+        tileHasBuilding(
+            x,
+            y
+        )
+    ) {
+
+        return false;
+
+    }
+
+
+    /*
+        Roads blokkerer tree growth.
+    */
+
+    if (
+        tileHasRoad(
+            x,
+            y
+        )
+    ) {
+
+        return false;
+
+    }
+
+
+    /*
+        Water blokkerer.
+    */
+
+    if (
+        getTileName(
+            "water",
+            x,
+            y
+        )
+    ) {
+
+        return false;
+
+    }
+
+
+    /*
+        Eksisterende stein / annen nature
+        blokkerer growth.
+
+        Et eksisterende tree er derimot OK.
+    */
+
+    if (
+        !isNatureRemoved(
+            x,
+            y
+        )
+    ) {
+
+        const nature =
+            getTileName(
+                "nature",
+                x,
+                y
+            );
+
+
+        if (
+            nature &&
+            nature !== "tree"
+        ) {
+
+            return false;
+
+        }
+
+    }
+
+
+    return true;
+
+}
 
 function generateAgeForRelation(
     relation
@@ -681,6 +1315,10 @@ function activateBuildMode(
         "active"
     );
 
+    lumberMillButton.classList.remove(
+        "active"
+    );
+
     button.classList.add(
         "active"
     );
@@ -795,6 +1433,17 @@ farmButton.addEventListener(
         activateBuildMode(
             "farm",
             farmButton
+        );
+
+    }
+);
+
+buildCategoryResourcesButton.addEventListener(
+    "click",
+    () => {
+
+        openBuildCategory(
+            "resources"
         );
 
     }
@@ -959,6 +1608,10 @@ function saveGame() {
             ...worldState.roads
         },
 
+        grownTrees: {
+            ...worldState.grownTrees
+        },
+
         buildings:
             worldState.buildings.map(
                 building => ({
@@ -1097,6 +1750,14 @@ function loadGame() {
             typeof saveData.roads === "object"
                 ? {
                     ...saveData.roads
+                }
+                : {};
+
+        worldState.grownTrees =
+            saveData.grownTrees &&
+            typeof saveData.grownTrees === "object"
+                ? {
+                    ...saveData.grownTrees
                 }
                 : {};
 
@@ -1331,6 +1992,9 @@ function loadGame() {
         roadButton.disabled =
             !worldState.settlement.founded;
 
+        lumberMillButton.disabled =
+            !worldState.settlement.founded;
+
         updateSettlementUI();
 
 
@@ -1393,6 +2057,9 @@ function newGame() {
     worldState.roads =
         {};
 
+    worldState.grownTrees =
+        {};
+
     worldState.buildings =
         [];
 
@@ -1436,6 +2103,9 @@ function newGame() {
         true;
 
     roadButton.disabled =
+        true;
+
+    lumberMillButton.disabled =
         true;
 
     /*
@@ -2166,13 +2836,28 @@ function getTileInfo(
         );
 
 
+    const key =
+        getTileKey(
+            x,
+            y
+        );
+
+
+    const grownTree =
+        worldState.grownTrees[key] === true;
+
+
     const nature =
-        isNatureRemoved(x, y)
-            ? null
-            : getTileName(
-                "nature",
-                x,
-                y
+        grownTree
+            ? "tree"
+            : (
+                isNatureRemoved(x, y)
+                    ? null
+                    : getTileName(
+                        "nature",
+                        x,
+                        y
+                    )
             );
 
 
@@ -2630,6 +3315,9 @@ function updateBuildToolbar() {
         buildCategoryInfrastructureButton.hidden =
             false;
 
+        buildCategoryResourcesButton.hidden =
+            false;
+
         return;
 
     }
@@ -2926,6 +3614,39 @@ settingsOverlay.addEventListener(
     }
 );
 
+lumberMillButton.addEventListener(
+    "click",
+    () => {
+
+        if (
+            !worldState.settlement.founded
+        ) {
+
+            return;
+
+        }
+
+
+        if (
+            buildMode ===
+            "lumberMill"
+        ) {
+
+            cancelBuildMode();
+
+            return;
+
+        }
+
+
+        activateBuildMode(
+            "lumberMill",
+            lumberMillButton
+        );
+
+    }
+);
+
 function cancelBuildMode() {
 
     buildMode = null;
@@ -2943,6 +3664,10 @@ function cancelBuildMode() {
     );
 
     roadButton.classList.remove(
+        "active"
+    );
+
+    lumberMillButton.classList.remove(
         "active"
     );
 
@@ -3732,6 +4457,22 @@ function canPlaceBuilding(
                 return false;
             }
 
+            /*
+                Vanlige bygninger kan ikke bygges
+                inne i en Lumber Mill forestry zone.
+            */
+
+            if (
+                tileInsideLumberZone(
+                    x,
+                    y
+                )
+            ) {
+
+                return false;
+
+            }
+
 
             /*
                 Vann blokkerer.
@@ -3843,13 +4584,21 @@ function placeBuilding(
 
     }
 
-    if (
-        !canPlaceBuilding(
-            def,
-            x,
-            y
-        )
-    ) {
+    const validPlacement =
+        type === "lumberMill"
+            ? canPlaceLumberMill(
+                def,
+                x,
+                y
+            )
+            : canPlaceBuilding(
+                def,
+                x,
+                y
+            );
+
+
+    if (!validPlacement) {
 
         console.log(
             "Cannot build here."
@@ -3881,6 +4630,15 @@ function placeBuilding(
             def.height
 
     };
+
+    if (
+        type === "lumberMill"
+    ) {
+
+        building.treeGrowth =
+            {};
+
+    }
 
 
     worldState.buildings.push(
@@ -3928,6 +4686,9 @@ function placeBuilding(
         roadButton.disabled =
             false;
 
+        lumberMillButton.disabled =
+            false;
+
         settlementCenterButton.classList.remove(
             "active"
         );
@@ -3954,6 +4715,242 @@ function placeBuilding(
         "Building placed:",
         building
     );
+
+}
+
+function getLumberZoneBounds(
+    buildingOrX,
+    y = null
+) {
+
+    const x =
+        typeof buildingOrX === "object"
+            ? buildingOrX.x
+            : buildingOrX;
+
+
+    const centerY =
+        typeof buildingOrX === "object"
+            ? buildingOrX.y
+            : y;
+
+
+    return {
+
+        minX:
+            x - 2,
+
+        maxX:
+            x + 2,
+
+        minY:
+            centerY - 2,
+
+        maxY:
+            centerY + 2
+
+    };
+
+}
+
+
+function tileInsideLumberZone(
+    tileX,
+    tileY
+) {
+
+    for (
+        const building
+        of worldState.buildings
+    ) {
+
+        if (
+            building.type !==
+            "lumberMill"
+        ) {
+
+            continue;
+
+        }
+
+
+        const zone =
+            getLumberZoneBounds(
+                building
+            );
+
+
+        if (
+            tileX >= zone.minX &&
+            tileX <= zone.maxX &&
+            tileY >= zone.minY &&
+            tileY <= zone.maxY
+        ) {
+
+            return true;
+
+        }
+
+    }
+
+
+    return false;
+
+}
+
+
+function lumberZonesOverlap(
+    x,
+    y
+) {
+
+    const newZone =
+        getLumberZoneBounds(
+            x,
+            y
+        );
+
+
+    for (
+        const building
+        of worldState.buildings
+    ) {
+
+        if (
+            building.type !==
+            "lumberMill"
+        ) {
+
+            continue;
+
+        }
+
+
+        const zone =
+            getLumberZoneBounds(
+                building
+            );
+
+
+        const overlaps =
+            !(
+                newZone.maxX < zone.minX ||
+                newZone.minX > zone.maxX ||
+                newZone.maxY < zone.minY ||
+                newZone.minY > zone.maxY
+            );
+
+
+        if (overlaps) {
+            return true;
+        }
+
+    }
+
+
+    return false;
+
+}
+
+function canPlaceLumberMill(
+    def,
+    x,
+    y
+) {
+
+    /*
+        Selve bygningen må stå på
+        en vanlig gyldig tile.
+    */
+
+    if (
+        !canPlaceBuilding(
+            def,
+            x,
+            y
+        )
+    ) {
+
+        return false;
+
+    }
+
+
+    const zone =
+        getLumberZoneBounds(
+            x,
+            y
+        );
+
+
+    /*
+        Hele 5x5-området må være
+        innenfor kartet.
+    */
+
+    if (
+        zone.minX < 0 ||
+        zone.minY < 0 ||
+        zone.maxX >= mapWidth ||
+        zone.maxY >= mapHeight
+    ) {
+
+        return false;
+
+    }
+
+
+    /*
+        Ingen bygninger kan eksistere
+        inne i forestry-området.
+    */
+
+    for (
+        let tileY = zone.minY;
+        tileY <= zone.maxY;
+        tileY++
+    ) {
+
+        for (
+            let tileX = zone.minX;
+            tileX <= zone.maxX;
+            tileX++
+        ) {
+
+            if (
+                tileHasBuilding(
+                    tileX,
+                    tileY
+                )
+            ) {
+
+                return false;
+
+            }
+
+        }
+
+    }
+
+
+    /*
+        To forestry-områder kan
+        ikke overlappe.
+    */
+
+    if (
+        lumberZonesOverlap(
+            x,
+            y
+        )
+    ) {
+
+        return false;
+
+    }
+
+
+    return true;
 
 }
 
@@ -4045,6 +5042,99 @@ function drawBuildPreview() {
 
     if (!buildMode) {
         return;
+    }
+
+    if (
+        buildMode === "lumberMill"
+    ) {
+
+        const def =
+            BUILDING_DEFS.lumberMill;
+
+
+        const valid =
+            canPlaceLumberMill(
+                def,
+                mouse.tileX,
+                mouse.tileY
+            ) &&
+            canAffordBuilding(
+                def
+            );
+
+
+        const zoneX =
+            (
+                mouse.tileX - 2
+            ) *
+            tileWidth;
+
+
+        const zoneY =
+            (
+                mouse.tileY - 2
+            ) *
+            tileHeight;
+
+
+        ctx.fillStyle =
+            valid
+                ? "rgba(100, 200, 80, 0.16)"
+                : "rgba(220, 50, 50, 0.16)";
+
+
+        ctx.strokeStyle =
+            valid
+                ? "rgba(140, 255, 120, 0.9)"
+                : "rgba(255, 80, 80, 0.9)";
+
+
+        ctx.fillRect(
+            zoneX,
+            zoneY,
+            tileWidth * 5,
+            tileHeight * 5
+        );
+
+
+        ctx.lineWidth =
+            2 /
+            camera.zoom;
+
+
+        ctx.strokeRect(
+            zoneX,
+            zoneY,
+            tileWidth * 5,
+            tileHeight * 5
+        );
+
+
+        /*
+            Selve mill-bygningen.
+        */
+
+        ctx.fillStyle =
+            valid
+                ? "rgba(70, 220, 90, 0.55)"
+                : "rgba(220, 50, 50, 0.55)";
+
+
+        ctx.fillRect(
+            mouse.tileX *
+            tileWidth,
+
+            mouse.tileY *
+            tileHeight,
+
+            tileWidth,
+
+            tileHeight
+        );
+
+
+        return;
+
     }
 
     if (
@@ -4728,6 +5818,7 @@ function processNewDay() {
     let foodProduced =
         0;
 
+
     for (
         const building
         of worldState.buildings
@@ -4738,9 +5829,11 @@ function processNewDay() {
                 building.type
             ];
 
+
         if (!def) {
             continue;
         }
+
 
         if (
             def.foodPerDay &&
@@ -4768,26 +5861,37 @@ function processNewDay() {
 
     }
 
+
     const foodConsumed =
         getPopulation();
 
-        worldState.resources.food +=
-            foodProduced;
 
-        worldState.resources.food -=
-            foodConsumed;
+    worldState.resources.food +=
+        foodProduced;
 
-        worldState.resources.food =
-            Math.max(
-                0,
-                worldState.resources.food
-            );
+
+    worldState.resources.food -=
+        foodConsumed;
+
+
+    worldState.resources.food =
+        Math.max(
+            0,
+            worldState.resources.food
+        );
+
+
+    const woodProduced =
+        processLumberMills();
+
 
     processPopulationGrowth();
 
+
     console.log(
-        `Day ${worldState.time.day}: +${foodProduced} Food, -${foodConsumed} Food`
+        `Day ${worldState.time.day}: +${foodProduced} Food, -${foodConsumed} Food, +${woodProduced} Wood`
     );
+
 
     updateSettlementUI();
 
@@ -5693,6 +6797,8 @@ function render() {
 
 
     drawMap();
+
+    drawGrownTrees();
 
     drawRoads();
 
