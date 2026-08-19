@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>VQ Settlement</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <div id="game-container">
+
+        <!-- FAST VENSTRE UI -->
+        <aside id="left-ui">
+
+            <div class="ui-title">
+                VQ Settlement
+            </div>
+
+            <div class="ui-section">
+                <div class="ui-section-title">Settlement</div>
+
+                <div class="ui-section-content">
+                    <button id="category-build" class="ui-action-button">
+                        Build
+                    </button>
+                </div>
+
+                <div class="settlement-readout">
+                    Settlement:
+                    <span id="settlement-name">Not founded</span>
+                    <br>
+
+                    Population:
+                    <span id="settlement-population">0</span>
+                    <br>
+
+                    Day:
+                    <span id="game-day">1</span>
+                    <br>
+
+                    Time:
+                    <span id="game-time">08:00</span>
+
+                    <div class="time-controls">
+
+                        <button
+                            id="time-pause-button"
+                            class="time-control-button"
+                            title="Pause / Play"
+                        >
+                            Pause
+                        </button>
+
+                        <button
+                            id="time-speed-real"
+                            class="time-control-button"
+                            title="Real-time speed"
+                        >
+                            Real
+                        </button>
+
+                        <button
+                            id="time-speed-1"
+                            class="time-control-button active"
+                            title="Normal speed"
+                        >
+                            1x
+                        </button>
+
+                        <button
+                            id="time-speed-2"
+                            class="time-control-button"
+                            title="2x speed"
+                        >
+                            2x
+                        </button>
+
+                        <button
+                            id="time-speed-5"
+                            class="time-control-button"
+                            title="5x speed"
+                        >
+                            5x
+                        </button>
+
+                        <button
+                            id="time-speed-10"
+                            class="time-control-button"
+                            title="10x speed"
+                        >
+                            10x
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="ui-section">
+                <div class="ui-section-title">Resources</div>
+
+                <div class="ui-placeholder">
+                    Food: <span id="resource-food">0</span><br>
+                    Wood: <span id="resource-wood">0</span><br>
+                    Stone: <span id="resource-stone">0</span>
+                </div>
+
+                <div class="ui-section-content">
+                    <button
+                        id="tool-chop-tree"
+                        class="ui-action-button"
+                        title="Chop Tree"
+                    >
+                        Chop Trees
+                    </button>
+                </div>
+
+            </div>
+
+            <button id="settings-button" class="ui-action-button settings-launch">
+                Settings
+            </button>
+
+        </aside>
+
+
+        <!-- SELVE KARTVINDUET -->
+        <div id="map-frame">
+
+            <canvas id="game-canvas"></canvas>
+
+            <!-- Midlertidig debug info -->
+            <div id="debug-panel">
+
+                <div class="game-title">
+                    Debug
+                </div>
+
+                <div>
+                    Tile:
+                    <span id="debug-tile">0, 0</span>
+                </div>
+
+                <div>
+                    Zoom:
+                    <span id="debug-zoom">100%</span>
+                </div>
+
+                <div>
+                    Ground:
+                    <span id="debug-ground">-</span>
+                </div>
+
+                <div>
+                    Water:
+                    <span id="debug-water">-</span>
+                </div>
+
+                <div>
+                    Nature:
+                    <span id="debug-nature">-</span>
+                </div>
+
+            </div>
+
+            <div id="building-info-popup">
+                <div id="building-info-title">
+                    Building
+                </div>
+
+                <div id="building-info-content">
+                </div>
+            </div>
+
+        </div>
+
+
+        <!-- FAST UI LANGS BUNNEN -->
+        <div id="bottom-ui">
+
+            <div class="bottom-placeholder">
+                Toolbar
+            </div>
+
+            <div class="toolbar-slots" id="toolbar-slots">
+
+                <button
+                    id="toolbar-people"
+                    class="toolbar-slot toolbar-button normal-toolbar-item"
+                    title="Population"
+                >
+                    People
+                </button>
+
+                <button
+                    id="toolbar-economy"
+                    class="toolbar-slot toolbar-button normal-toolbar-item"
+                    title="Economy"
+                >
+                    Economy
+                </button>
+
+                <!-- BUILD CATEGORIES -->
+
+                <button
+                    id="build-category-housing"
+                    class="toolbar-slot toolbar-button build-toolbar-item"
+                    title="Housing"
+                    hidden
+                >
+                    Housing
+                </button>
+
+                <button
+                    id="build-category-food"
+                    class="toolbar-slot toolbar-button build-toolbar-item"
+                    title="Food"
+                    hidden
+                >
+                    Food
+                </button>
+
+                <button
+                    id="build-category-infrastructure"
+                    class="toolbar-slot toolbar-button build-toolbar-item"
+                    title="Infrastructure"
+                    hidden
+                >
+                    Infra
+                </button>
+
+                <button
+                    id="build-category-resources"
+                    class="toolbar-slot toolbar-button build-toolbar-item"
+                    title="Resources"
+                    hidden
+                >
+                    Resources
+                </button>
+
+
+                <!-- BACK -->
+
+                <button
+                    id="build-toolbar-back"
+                    class="toolbar-slot toolbar-button build-toolbar-item"
+                    hidden
+                >
+                    Back
+                </button>
+
+
+                <!-- INFRASTRUCTURE -->
+
+                <button
+                    id="tool-settlement-center"
+                    class="toolbar-slot toolbar-button build-toolbar-item"
+                    data-build-category="infrastructure"
+                    title="Settlement Center"
+                    hidden
+                >
+                    Center
+                </button>
+
+                <!-- ROADS -->
+
+                <button
+                    id="tool-road"
+                    class="toolbar-slot toolbar-button build-toolbar-item"
+                    data-build-category="infrastructure"
+                    title="Road - Cost: 2 Wood"
+                    disabled
+                    hidden
+                >
+                    Road
+                </button>
+
+                <!-- HOUSING -->
+
+                <button
+                    id="tool-house"
+                    class="toolbar-slot toolbar-button build-toolbar-item"
+                    data-build-category="housing"
+                    title="House - Cost: 20 Wood"
+                    disabled
+                    hidden
+                >
+                    House
+                </button>
+
+
+                <!-- FOOD -->
+
+                <button
+                    id="tool-farm"
+                    class="toolbar-slot toolbar-button build-toolbar-item"
+                    data-build-category="food"
+                    title="Farm - Cost: 30 Wood"
+                    disabled
+                    hidden
+                >
+                    Farm
+                </button>
+
+                <button
+                    id="tool-market-hall"
+                    class="toolbar-slot toolbar-button build-toolbar-item"
+                    data-build-category="food"
+                    title="Market Hall - Cost: 40 Wood"
+                    disabled
+                    hidden
+                >
+                    Market
+                </button>
+
+                <!-- RESOURCES -->
+
+                <button
+                    id="tool-lumber-mill"
+                    class="toolbar-slot toolbar-button build-toolbar-item"
+                    data-build-category="resources"
+                    title="Lumber Mill - Cost: 30 Wood"
+                    disabled
+                    hidden
+                >
+                    Lumber
+                </button>
+
+                <button
+                    id="tool-stone-quarry"
+                    class="toolbar-slot toolbar-button build-toolbar-item"
+                    data-build-category="resources"
+                    title="Stone Quarry - Cost: 40 Wood"
+                    disabled
+                    hidden
+                >
+                    Quarry
+                </button>
+
+            </div>
+
+        </div>
+
+        <!-- =====================================================
+            PEOPLE MENU
+            ===================================================== -->
+
+        <div id="people-menu-layer">
+
+            <div id="people-menu">
+
+                <div class="people-menu-header">
+
+                    <button
+                        id="people-menu-back"
+                        class="people-menu-header-button"
+                        hidden
+                    >
+                        Back
+                    </button>
+
+                    <div id="people-menu-title">
+                        People
+                    </div>
+
+                    <button
+                        id="people-menu-close"
+                        class="people-menu-header-button"
+                    >
+                        X
+                    </button>
+
+                </div>
+
+
+                <div id="people-menu-search-wrap">
+
+                    <input
+                        id="people-menu-search"
+                        type="text"
+                        autocomplete="off"
+                        placeholder="Search surname..."
+                    >
+
+                </div>
+
+
+                <div id="people-menu-content">
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- =====================================================
+            ECONOMY MENU
+            ===================================================== -->
+
+        <div id="economy-menu-layer">
+
+            <div id="economy-menu">
+
+                <div class="people-menu-header">
+
+                    <div></div>
+
+                    <div id="economy-menu-title">
+                        Economy
+                    </div>
+
+                    <button
+                        id="economy-menu-close"
+                        class="people-menu-header-button"
+                    >
+                        X
+                    </button>
+
+                </div>
+
+                <div id="economy-menu-content">
+                </div>
+
+            </div>
+
+        </div>
+
+        <div id="settings-overlay">
+
+            <div id="settings-menu">
+
+                <div class="settings-title">
+                    Settings
+                </div>
+
+                <div id="save-status">
+                    No save found.
+                </div>
+
+                <button id="new-game-button" class="settings-menu-button">
+                    New Game
+                </button>
+
+                <button id="save-game-button" class="settings-menu-button">
+                    Save Game
+                </button>
+
+                <button id="load-game-button" class="settings-menu-button">
+                    Load Game
+                </button>
+
+                <button id="close-settings-button" class="settings-menu-button">
+                    Close
+                </button>
+
+            </div>
+
+        </div>
+
+        <div id="settlement-name-overlay">
+
+            <div id="settlement-name-menu">
+
+                <div class="settings-title">
+                    Found Settlement
+                </div>
+
+                <div class="name-description">
+                    Give your new settlement a name.
+                </div>
+
+                <input
+                    id="settlement-name-input"
+                    type="text"
+                    maxlength="24"
+                    autocomplete="off"
+                    placeholder="Settlement name"
+                >
+
+                <button
+                    id="confirm-settlement-name"
+                    class="settings-menu-button"
+                >
+                    Found Settlement
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <script src="script.js"></script>
+
+</body>
+</html>

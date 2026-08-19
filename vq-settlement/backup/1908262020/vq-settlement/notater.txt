@@ -1,0 +1,16 @@
+---------HUSKELISTE---------
+* Personer har nå et hjem. Hvis vi legger til fjerning av hjem, må vi fikse dette. (tror dette er fikset assignHomesToUnhousedSettlers();)
+
+
+
+
+--------PLANLEGGING----------
+
+
+
+
+--------SIDEN SIST OPPLASNTING----------
+
+Stone quary
+Economy tab
+
