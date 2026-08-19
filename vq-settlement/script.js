@@ -107,6 +107,11 @@ const confirmSettlementNameButton =
 const farmButton =
     document.getElementById("tool-farm");
 
+const marketHallButton =
+    document.getElementById(
+        "tool-market-hall"
+    );
+
 const gameDayText =
     document.getElementById("game-day");
 
@@ -168,6 +173,11 @@ const lumberMillButton =
         "tool-lumber-mill"
     );
 
+const stoneQuarryButton =
+    document.getElementById(
+        "tool-stone-quarry"
+    );
+
 const peopleToolbarButton =
     document.getElementById(
         "toolbar-people"
@@ -206,6 +216,26 @@ const peopleMenuSearchInput =
 const peopleMenuContent =
     document.getElementById(
         "people-menu-content"
+    );
+
+const economyToolbarButton =
+    document.getElementById(
+        "toolbar-economy"
+    );
+
+const economyMenuLayer =
+    document.getElementById(
+        "economy-menu-layer"
+    );
+
+const economyMenuCloseButton =
+    document.getElementById(
+        "economy-menu-close"
+    );
+
+const economyMenuContent =
+    document.getElementById(
+        "economy-menu-content"
     );
 
 
@@ -297,6 +327,11 @@ const LUMBER_TREE_GROW_MAX_HOURS =
 const LUMBER_WOOD_PER_TREE =
     5;
 
+const QUARRY_HARVEST_INTERVAL_HOURS =
+    2;
+
+const QUARRY_STONE_PER_HARVEST =
+    3;
 
 const WORK_START_HOUR =
     8;
@@ -311,6 +346,18 @@ const FARM_HARVEST_INTERVAL_HOURS =
     2;
 
 const FARM_FOOD_PER_HARVEST =
+    2;
+
+const MARKET_HALL_FOOD_CAPACITY =
+    100;
+
+const HOUSEHOLD_FOOD_DAYS =
+    3;
+
+const SETTLEMENT_CENTER_FOOD_CAPACITY =
+    30;
+
+const HOUSEHOLD_REFILL_THRESHOLD_DAYS =
     2;
 
 const NPC_GRASS_MOVE_SPEED =
@@ -404,6 +451,15 @@ const BLOCKED_WANDER_PAUSE_MAX_MINUTES =
 const WANDER_ROUTE_ATTEMPTS =
     12;
 
+let economyMenuOpen =
+    false;
+
+let economyMenuSignature =
+    null;
+
+let economyMenuRefreshAccumulator =
+    0;
+
 /* =========================================================
    CAMERA
    ========================================================= */
@@ -476,7 +532,11 @@ const BUILDING_DEFS = {
 
         cost: {},
 
-        housingCapacity: 5
+        housingCapacity: 5,
+
+
+        foodStorageCapacity:
+            SETTLEMENT_CENTER_FOOD_CAPACITY
 
     },
 
@@ -523,6 +583,32 @@ const BUILDING_DEFS = {
 
     },
 
+    marketHall: {
+
+        name: "Market Hall",
+
+        label: "MARKET",
+
+        width: 2,
+        height: 2,
+
+        cost: {
+
+            wood: 40
+
+        },
+
+        jobType:
+            "Market Worker",
+
+        workerSlots:
+            3,
+
+        foodStorageCapacity:
+            MARKET_HALL_FOOD_CAPACITY
+
+    },
+
     lumberMill: {
 
         name: "Lumber Mill",
@@ -546,6 +632,29 @@ const BUILDING_DEFS = {
 
         forestryRadius:
             2
+
+    },
+
+    stoneQuarry: {
+
+        name: "Stone Quarry",
+
+        label: "QUARRY",
+
+        width: 2,
+        height: 2,
+
+        cost: {
+
+            wood: 40
+
+        },
+
+        jobType:
+            "Stonecutter",
+
+        workerSlots:
+            1
 
     }
 
@@ -572,6 +681,55 @@ const worldState = {
         wood: 0,
 
         stone: 0
+
+    },
+
+    production: {
+
+        foodToday: 0,
+
+        foodWastedToday: 0,
+
+        woodToday: 0,
+
+        stoneToday: 0,
+
+        manualWoodToday: 0
+
+    },
+
+    foodStatus: {
+
+        /*
+            shortageActive betyr nå:
+            folk fikk faktisk ikke nok
+            mat til dagens måltid.
+        */
+
+        shortageActive: false,
+
+        shortageAmount: 0,
+
+        lastRequired: 0,
+
+        lastConsumed: 0,
+
+        consecutiveShortageDays: 0,
+
+        distributionShortageActive:
+            false,
+
+        unfilledHouseholdFood:
+            0,
+
+        householdsUnableToRefill:
+            0,
+
+        hungryHouseholds:
+            0,
+
+        hungryResidents:
+            0
 
     },
 
@@ -1197,6 +1355,10 @@ function processLumberHarvest(
             LUMBER_WOOD_PER_TREE;
 
 
+        worldState.production.woodToday +=
+            LUMBER_WOOD_PER_TREE;
+
+
         woodProduced +=
             LUMBER_WOOD_PER_TREE;
 
@@ -1413,6 +1575,14 @@ function processFarmHarvest(
         0;
 
 
+    let foodStored =
+        0;
+
+
+    let foodLost =
+        0;
+
+
     for (
         const building
         of worldState.buildings
@@ -1434,9 +1604,134 @@ function processFarmHarvest(
             );
 
 
+        if (
+            workers.length <= 0
+        ) {
+
+            continue;
+
+        }
+
+
+        const result =
+            storeFoodInDepots(
+                FARM_FOOD_PER_HARVEST
+            );
+
+
         /*
-            Ingen Farmer =
-            ingen harvest.
+            Production teller det farmen
+            faktisk produserte, også hvis
+            lageret var fullt.
+        */
+
+        worldState.production
+            .foodToday +=
+                FARM_FOOD_PER_HARVEST;
+
+
+        worldState.production
+            .foodWastedToday +=
+                result.lost;
+
+
+        foodProduced +=
+            FARM_FOOD_PER_HARVEST;
+
+
+        foodStored +=
+            result.stored;
+
+
+        foodLost +=
+            result.lost;
+
+
+        console.log(
+            `${String(hour).padStart(2, "0")}:00 - Farm produced ${FARM_FOOD_PER_HARVEST} Food. Stored ${result.stored}, lost ${result.lost}.`
+        );
+
+    }
+
+
+    if (
+        foodProduced > 0
+    ) {
+
+        updateSettlementUI();
+
+    }
+
+}
+
+function isQuarryHarvestHour(
+    hour
+) {
+
+    if (
+        hour <= WORK_START_HOUR ||
+        hour > WORK_END_HOUR
+    ) {
+
+        return false;
+
+    }
+
+
+    return (
+        (
+            hour -
+            WORK_START_HOUR
+        ) %
+        QUARRY_HARVEST_INTERVAL_HOURS
+    ) === 0;
+
+}
+
+
+function processQuarryHarvest(
+    hour
+) {
+
+    if (
+        !isQuarryHarvestHour(
+            hour
+        )
+    ) {
+
+        return;
+
+    }
+
+
+    let stoneProduced =
+        0;
+
+
+    for (
+        const building
+        of worldState.buildings
+    ) {
+
+        if (
+            building.type !==
+            "stoneQuarry"
+        ) {
+
+            continue;
+
+        }
+
+
+        const workers =
+            getActiveBuildingWorkers(
+                building.id
+            );
+
+
+        /*
+            Ingen Stonecutter på jobb =
+            ingen produksjon.
         */
 
         if (
@@ -1448,27 +1743,32 @@ function processFarmHarvest(
         }
 
 
-        worldState.resources.food +=
-            FARM_FOOD_PER_HARVEST;
+        worldState.resources.stone +=
+            QUARRY_STONE_PER_HARVEST;
 
 
-        foodProduced +=
-            FARM_FOOD_PER_HARVEST;
+        /*
+            Economy-systemet fra
+            forrige steg.
+        */
+
+        worldState.production.stoneToday +=
+            QUARRY_STONE_PER_HARVEST;
+
+
+        stoneProduced +=
+            QUARRY_STONE_PER_HARVEST;
 
 
         console.log(
-            `${String(hour).padStart(2, "0")}:00 - Farm harvested. +${FARM_FOOD_PER_HARVEST} Food`
+            `${String(hour).padStart(2, "0")}:00 - Quarry produced stone. +${QUARRY_STONE_PER_HARVEST} Stone`
         );
 
     }
 
 
-    /*
-        Oppdater Resources med en gang.
-    */
-
     if (
-        foodProduced > 0
+        stoneProduced > 0
     ) {
 
         updateSettlementUI();
@@ -1529,6 +1829,10 @@ function processGameHours() {
         );
 
         processLumberHarvest(
+            hour
+        );
+
+        processQuarryHarvest(
             hour
         );
 
@@ -1955,6 +2259,7 @@ function openSettingsMenu() {
 
     closePeopleMenu();
 
+    closeEconomyMenu();
 
     settingsOpen =
         true;
@@ -2030,6 +2335,10 @@ function activateBuildMode(
         "active"
     );
 
+    marketHallButton.classList.remove(
+        "active"
+    );
+
     houseButton.classList.remove(
         "active"
     );
@@ -2043,6 +2352,10 @@ function activateBuildMode(
     );
 
     lumberMillButton.classList.remove(
+        "active"
+    );
+
+    stoneQuarryButton.classList.remove(
         "active"
     );
 
@@ -2331,6 +2644,14 @@ function saveGame() {
             ...worldState.resources
         },
 
+        production: {
+            ...worldState.production
+        },
+
+        foodStatus: {
+            ...worldState.foodStatus
+        },
+
         roads: {
             ...worldState.roads
         },
@@ -2431,6 +2752,12 @@ function loadGame() {
         const saveData =
             JSON.parse(rawSave);
 
+        const legacySavedFood =
+            Number.isFinite(
+                saveData.resources?.food
+            )
+                ? saveData.resources.food
+                : 0;
 
         /*
             Settlement
@@ -2474,6 +2801,77 @@ function loadGame() {
 
         }
 
+        worldState.production = {
+
+            foodToday: 0,
+
+            foodWastedToday: 0,
+
+            woodToday: 0,
+
+            stoneToday: 0,
+
+            manualWoodToday: 0
+
+        };
+
+
+        if (
+            saveData.production &&
+            typeof saveData.production ===
+            "object"
+        ) {
+
+            worldState.production = {
+                ...worldState.production,
+                ...saveData.production
+            };
+
+        }
+
+        worldState.foodStatus = {
+
+            shortageActive: false,
+
+            shortageAmount: 0,
+
+            lastRequired: 0,
+
+            lastConsumed: 0,
+
+            consecutiveShortageDays: 0,
+
+            distributionShortageActive:
+                false,
+
+            unfilledHouseholdFood:
+                0,
+
+            householdsUnableToRefill:
+                0,
+
+            hungryHouseholds:
+                0,
+
+            hungryResidents:
+                0
+
+        };
+
+
+        if (
+            saveData.foodStatus &&
+            typeof saveData.foodStatus ===
+            "object"
+        ) {
+
+            worldState.foodStatus = {
+                ...worldState.foodStatus,
+                ...saveData.foodStatus
+            };
+
+        }
+
         worldState.roads =
             saveData.roads &&
             typeof saveData.roads === "object"
@@ -2500,6 +2898,36 @@ function loadGame() {
             )
                 ? saveData.buildings
                 : [];
+
+        for (
+            const building
+            of worldState.buildings
+        ) {
+
+            if (
+                building.type !==
+                    "settlementCenter" &&
+                building.type !==
+                    "marketHall"
+            ) {
+
+                continue;
+
+            }
+
+
+            if (
+                !Number.isFinite(
+                    building.foodStorage
+                )
+            ) {
+
+                building.foodStorage =
+                    0;
+
+            }
+
+        }
 
 
         worldState.settlers =
@@ -2663,6 +3091,17 @@ function loadGame() {
         ) {
 
             if (
+                !Number.isFinite(
+                    family.foodStorage
+                )
+            ) {
+
+                family.foodStorage =
+                    0;
+
+            }
+
+            if (
                 family.id >=
                 worldState.nextFamilyId
             ) {
@@ -2673,6 +3112,28 @@ function loadGame() {
             }
 
         }
+
+        /*
+            Migrer Food fra gamle saves.
+
+            Gamle saves hadde maten direkte
+            i resources.food og ikke i
+            fysiske lagre.
+        */
+
+        if (
+            getTotalFoodAvailable() === 0 &&
+            legacySavedFood > 0
+        ) {
+
+            storeFoodInDepots(
+                legacySavedFood
+            );
+
+        }
+
+
+        syncLegacyFoodResource();
 
         npcRuntime.clear();
 
@@ -2771,10 +3232,16 @@ function loadGame() {
         farmButton.disabled =
             !worldState.settlement.founded;
 
+        marketHallButton.disabled =
+            !worldState.settlement.founded;
+
         roadButton.disabled =
             !worldState.settlement.founded;
 
         lumberMillButton.disabled =
+            !worldState.settlement.founded;
+
+        stoneQuarryButton.disabled =
             !worldState.settlement.founded;
 
         updateSettlementUI();
@@ -2838,6 +3305,49 @@ function newGame() {
 
     };
 
+    worldState.production = {
+
+        foodToday: 0,
+
+        foodWastedToday: 0,
+
+        woodToday: 0,
+
+        stoneToday: 0,
+
+        manualWoodToday: 0
+
+    };
+
+    worldState.foodStatus = {
+
+        shortageActive: false,
+
+        shortageAmount: 0,
+
+        lastRequired: 0,
+
+        lastConsumed: 0,
+
+        consecutiveShortageDays: 0,
+
+        distributionShortageActive:
+            false,
+
+        unfilledHouseholdFood:
+            0,
+
+        householdsUnableToRefill:
+            0,
+
+        hungryHouseholds:
+            0,
+
+        hungryResidents:
+            0
+
+    };
+
     worldState.roads =
         {};
 
@@ -2891,10 +3401,16 @@ function newGame() {
     farmButton.disabled =
         true;
 
+    marketHallButton.disabled =
+        true;
+
     roadButton.disabled =
         true;
 
     lumberMillButton.disabled =
+        true;
+
+    stoneQuarryButton.disabled =
         true;
 
     /*
@@ -4218,6 +4734,7 @@ function openPeopleMenu() {
 
     }
 
+    closeEconomyMenu();
 
     closeBuildingInfo();
 
@@ -5079,6 +5596,483 @@ peopleMenuContent.addEventListener(
 );
 
 /* =========================================================
+   ECONOMY MENU
+   ========================================================= */
+
+function openEconomyMenu() {
+
+    if (
+        settingsOpen ||
+        namingSettlement ||
+        buildModeActive
+    ) {
+
+        return;
+
+    }
+
+
+    closePeopleMenu();
+
+    closeBuildingInfo();
+
+    cancelHarvestMode();
+
+
+    economyMenuOpen =
+        true;
+
+
+    economyMenuSignature =
+        null;
+
+
+    economyMenuRefreshAccumulator =
+        0;
+
+
+    economyToolbarButton.classList.add(
+        "active"
+    );
+
+
+    economyMenuLayer.classList.add(
+        "open"
+    );
+
+
+    renderEconomyMenu();
+
+}
+
+
+function closeEconomyMenu() {
+
+    economyMenuOpen =
+        false;
+
+
+    economyMenuSignature =
+        null;
+
+
+    economyToolbarButton.classList.remove(
+        "active"
+    );
+
+
+    economyMenuLayer.classList.remove(
+        "open"
+    );
+
+}
+
+
+function getEconomyMenuSignature() {
+
+    return JSON.stringify({
+
+        population:
+            getPopulation(),
+
+        totalFood:
+            getTotalFoodAvailable(),
+
+        marketFood:
+            getTotalMarketFood(),
+
+        centerFood:
+            getTotalCenterFood(),
+
+        householdFood:
+            getTotalHouseholdFood(),
+
+        wood:
+            worldState.resources.wood,
+
+        stone:
+            worldState.resources.stone,
+
+        production:
+            worldState.production,
+
+        foodStatus:
+            worldState.foodStatus
+
+    });
+
+}
+
+
+function renderEconomyMenu() {
+
+    if (!economyMenuOpen) {
+        return;
+    }
+
+
+    const population =
+        getPopulation();
+
+
+    const foodProduced =
+        worldState.production
+            .foodToday;
+
+
+    const foodWasted =
+        worldState.production
+            .foodWastedToday || 0;
+
+
+    const foodBalance =
+        foodProduced -
+        population;
+
+
+    const marketFood =
+        getTotalMarketFood();
+
+
+    const marketCapacity =
+        getTotalMarketFoodCapacity();
+
+
+    const centerFood =
+        getTotalCenterFood();
+
+
+    const centerCapacity =
+        getTotalCenterFoodCapacity();
+
+
+    const householdFood =
+        getTotalHouseholdFood();
+
+
+    const householdCapacity =
+        getTotalHouseholdFoodCapacity();
+
+
+    const totalFood =
+        getTotalFoodAvailable();
+
+
+    let foodStatusText =
+        "Stable";
+
+
+    let foodStatusClass =
+        "economy-positive";
+
+
+    if (
+        worldState.foodStatus
+            .shortageActive
+    ) {
+
+        foodStatusText =
+            "HUNGER";
+
+
+        foodStatusClass =
+            "economy-negative";
+
+    }
+    else if (
+        worldState.foodStatus
+            .distributionShortageActive
+    ) {
+
+        foodStatusText =
+            "SUPPLY SHORTAGE";
+
+
+        foodStatusClass =
+            "economy-negative";
+
+    }
+
+
+    const balanceClass =
+        foodBalance >= 0
+            ? "economy-positive"
+            : "economy-negative";
+
+
+    const woodProduced =
+        worldState.production
+            .woodToday;
+
+
+    const manualWood =
+        worldState.production
+            .manualWoodToday;
+
+
+    const totalWood =
+        woodProduced +
+        manualWood;
+
+
+    const stoneProduced =
+        worldState.production
+            .stoneToday;
+
+
+    economyMenuContent.innerHTML =
+        `
+        <div class="economy-resource">
+
+            <div class="economy-resource-title">
+                Population
+            </div>
+
+            Residents:
+            ${population}
+
+            <br>
+
+            Food consumption:
+            ${population} / day
+
+        </div>
+
+
+        <div class="economy-resource">
+
+            <div class="economy-resource-title">
+                Food
+            </div>
+
+            Status:
+            <span class="${foodStatusClass}">
+                ${foodStatusText}
+            </span>
+
+            <br><br>
+
+            Total food:
+            ${totalFood}
+
+            <br>
+
+            Settlement Center:
+            ${centerFood}
+            /
+            ${centerCapacity}
+
+            <br>
+
+            Market Hall:
+            ${marketFood}
+            /
+            ${marketCapacity}
+
+            <br>
+
+            Households:
+            ${householdFood}
+            /
+            ${householdCapacity}
+
+            <br><br>
+
+            Produced today:
+            <span class="economy-positive">
+                +${foodProduced}
+            </span>
+
+            <br>
+
+            Food wasted today:
+            <span class="${
+                foodWasted > 0
+                    ? "economy-negative"
+                    : ""
+            }">
+                ${foodWasted}
+            </span>
+
+            <br>
+
+            Consumption / day:
+            <span class="economy-negative">
+                -${population}
+            </span>
+
+            <br>
+
+            Production balance:
+            <span class="${balanceClass}">
+                ${foodBalance >= 0 ? "+" : ""}
+                ${foodBalance}
+            </span>
+
+            <br><br>
+
+            Last daily meal:
+            ${worldState.foodStatus.lastConsumed}
+            /
+            ${worldState.foodStatus.lastRequired}
+
+            <br>
+
+            Hungry residents:
+            ${worldState.foodStatus.hungryResidents}
+
+            <br>
+
+            Households unable to refill:
+            ${worldState.foodStatus.householdsUnableToRefill}
+
+            <br>
+
+            Missing household food:
+            ${worldState.foodStatus.unfilledHouseholdFood}
+
+            <br>
+
+            Consecutive hunger days:
+            ${worldState.foodStatus.consecutiveShortageDays}
+
+        </div>
+
+
+        <div class="economy-resource">
+
+            <div class="economy-resource-title">
+                Wood
+            </div>
+
+            Stored:
+            ${worldState.resources.wood}
+
+            <br>
+
+            Lumber Mills today:
+            <span class="economy-positive">
+                +${woodProduced}
+            </span>
+
+            <br>
+
+            Gathered manually:
+            <span class="economy-positive">
+                +${manualWood}
+            </span>
+
+            <br>
+
+            Total gained today:
+            <span class="economy-positive">
+                +${totalWood}
+            </span>
+
+        </div>
+
+
+        <div class="economy-resource">
+
+            <div class="economy-resource-title">
+                Stone
+            </div>
+
+            Stored:
+            ${worldState.resources.stone}
+
+            <br>
+
+            Produced today:
+            <span class="economy-positive">
+                +${stoneProduced}
+            </span>
+
+        </div>
+        `;
+
+
+    economyMenuSignature =
+        getEconomyMenuSignature();
+
+}
+
+
+function refreshEconomyMenu(
+    deltaTime
+) {
+
+    if (!economyMenuOpen) {
+        return;
+    }
+
+
+    economyMenuRefreshAccumulator +=
+        deltaTime;
+
+
+    if (
+        economyMenuRefreshAccumulator <
+        0.25
+    ) {
+
+        return;
+
+    }
+
+
+    economyMenuRefreshAccumulator =
+        0;
+
+
+    const signature =
+        getEconomyMenuSignature();
+
+
+    if (
+        signature ===
+        economyMenuSignature
+    ) {
+
+        return;
+
+    }
+
+
+    renderEconomyMenu();
+
+}
+
+
+economyToolbarButton.addEventListener(
+    "click",
+    () => {
+
+        if (economyMenuOpen) {
+
+            closeEconomyMenu();
+
+        }
+        else {
+
+            openEconomyMenu();
+
+        }
+
+    }
+);
+
+
+economyMenuCloseButton.addEventListener(
+    "click",
+    () => {
+
+        closeEconomyMenu();
+
+    }
+);
+
+/* =========================================================
    BUILD / BUTTONS
    ========================================================= */
 
@@ -5192,6 +6186,7 @@ function enterBuildMode() {
 
     closePeopleMenu();
 
+    closeEconomyMenu();
 
     buildModeActive =
         true;
@@ -5482,11 +6477,81 @@ lumberMillButton.addEventListener(
     }
 );
 
+stoneQuarryButton.addEventListener(
+    "click",
+    () => {
+
+        if (
+            !worldState.settlement.founded
+        ) {
+
+            return;
+
+        }
+
+
+        if (
+            buildMode ===
+            "stoneQuarry"
+        ) {
+
+            cancelBuildMode();
+
+            return;
+
+        }
+
+
+        activateBuildMode(
+            "stoneQuarry",
+            stoneQuarryButton
+        );
+
+    }
+);
+
+marketHallButton.addEventListener(
+    "click",
+    () => {
+
+        if (
+            !worldState.settlement.founded
+        ) {
+
+            return;
+
+        }
+
+
+        if (
+            buildMode ===
+            "marketHall"
+        ) {
+
+            cancelBuildMode();
+
+            return;
+
+        }
+
+
+        activateBuildMode(
+            "marketHall",
+            marketHallButton
+        );
+
+    }
+);
+
 function cancelBuildMode() {
 
     buildMode = null;
 
     farmButton.classList.remove(
+        "active"
+    );
+
+    marketHallButton.classList.remove(
         "active"
     );
 
@@ -5503,6 +6568,10 @@ function cancelBuildMode() {
     );
 
     lumberMillButton.classList.remove(
+        "active"
+    );
+
+    stoneQuarryButton.classList.remove(
         "active"
     );
 
@@ -5581,6 +6650,10 @@ function harvestTree(x, y) {
         5;
 
 
+    worldState.production.manualWoodToday +=
+        5;
+
+
     updateSettlementUI();
 
 
@@ -5601,6 +6674,14 @@ window.addEventListener(
             if (peopleMenuOpen) {
 
                 closePeopleMenu();
+
+                return;
+
+            }
+
+            if (economyMenuOpen) {
+
+                closeEconomyMenu();
 
                 return;
 
@@ -6043,11 +7124,43 @@ function renderBuildingInfoContent(
        PLACEHOLDERS
        ============================================= */
 
+
     html +=
         "<br><br>Built: -";
 
-    html +=
-        "<br>Food Storage: -";
+
+    if (
+        building.type ===
+            "marketHall" ||
+        building.type ===
+            "settlementCenter"
+    ) {
+
+        const storedFood =
+            Number.isFinite(
+                building.foodStorage
+            )
+                ? building.foodStorage
+                : 0;
+
+
+        const capacity =
+            getFoodStorageCapacity(
+                building
+            );
+
+
+        html +=
+            `<br>Food Storage: ${storedFood} / ${capacity}`;
+
+    }
+    else {
+
+        html +=
+            "<br>Food Storage: -";
+
+    }
+
 
     html +=
         "<br>Happiness: -";
@@ -6150,7 +7263,13 @@ function getBuildingInfoSignature(
 
         building.id,
 
-        building.type
+        building.type,
+
+        Number.isFinite(
+            building.foodStorage
+        )
+            ? building.foodStorage
+            : "NO_FOOD_STORAGE"
 
     ];
 
@@ -6681,18 +7800,43 @@ function placeBuilding(
 
     }
 
-    const validPlacement =
+    let validPlacement;
+
+
+    if (
         type === "lumberMill"
-            ? canPlaceLumberMill(
-                def,
-                x,
-                y
-            )
-            : canPlaceBuilding(
+    ) {
+
+        validPlacement =
+            canPlaceLumberMill(
                 def,
                 x,
                 y
             );
+
+    }
+    else if (
+        type === "stoneQuarry"
+    ) {
+
+        validPlacement =
+            canPlaceStoneQuarry(
+                def,
+                x,
+                y
+            );
+
+    }
+    else {
+
+        validPlacement =
+            canPlaceBuilding(
+                def,
+                x,
+                y
+            );
+
+    }
 
 
     if (!validPlacement) {
@@ -6729,6 +7873,16 @@ function placeBuilding(
     };
 
     if (
+        type === "marketHall" ||
+        type === "settlementCenter"
+    ) {
+
+        building.foodStorage =
+            0;
+
+    }
+
+    if (
         type === "lumberMill"
     ) {
 
@@ -6759,6 +7913,52 @@ function placeBuilding(
 
     markNavigationChanged();
 
+    if (
+        type === "stoneQuarry"
+    ) {
+
+        for (
+            let offsetY = 0;
+            offsetY < def.height;
+            offsetY++
+        ) {
+
+            for (
+                let offsetX = 0;
+                offsetX < def.width;
+                offsetX++
+            ) {
+
+                const stoneX =
+                    x +
+                    offsetX;
+
+
+                const stoneY =
+                    y +
+                    offsetY;
+
+
+                if (
+                    tileHasNaturalStone(
+                        stoneX,
+                        stoneY
+                    )
+                ) {
+
+                    removeNatureAt(
+                        stoneX,
+                        stoneY
+                    );
+
+                }
+
+            }
+
+        }
+
+    }
+
     assignAvailableJobs();
 
     assignHomesToUnhousedSettlers();
@@ -6779,14 +7979,33 @@ function placeBuilding(
             "Unnamed Settlement";
 
 
-        createFamily(
-            5,
-            building.id
-        );
+        /*
+            Startmaten ligger fysisk
+            i Settlement Center.
+        */
 
-        worldState.resources.food =
+        building.foodStorage =
             25;
 
+
+        const foundingFamily =
+            createFamily(
+                5,
+                building.id
+            );
+
+
+        /*
+            Første familie fyller opp
+            hjemmelageret fra Center.
+        */
+
+        refillFamilyFoodStorage(
+            foundingFamily
+        );
+
+
+        syncLegacyFoodResource();
 
         settlementCenterButton.disabled =
             true;
@@ -6797,10 +8016,16 @@ function placeBuilding(
         farmButton.disabled =
             false;
 
+        marketHallButton.disabled =
+            false;
+
         roadButton.disabled =
             false;
 
         lumberMillButton.disabled =
+            false;
+
+        stoneQuarryButton.disabled =
             false;
 
         settlementCenterButton.classList.remove(
@@ -7222,6 +8447,150 @@ function canPlaceLumberMill(
 
 }
 
+function tileHasNaturalStone(
+    x,
+    y
+) {
+
+    if (
+        isNatureRemoved(
+            x,
+            y
+        )
+    ) {
+
+        return false;
+
+    }
+
+
+    return (
+        getTileName(
+            "nature",
+            x,
+            y
+        ) === "stone"
+    );
+
+}
+
+
+function canPlaceStoneQuarry(
+    def,
+    startX,
+    startY
+) {
+
+    let foundStone =
+        false;
+
+
+    for (
+        let offsetY = 0;
+        offsetY < def.height;
+        offsetY++
+    ) {
+
+        for (
+            let offsetX = 0;
+            offsetX < def.width;
+            offsetX++
+        ) {
+
+            const x =
+                startX +
+                offsetX;
+
+
+            const y =
+                startY +
+                offsetY;
+
+
+            const tile =
+                getTileInfo(
+                    x,
+                    y
+                );
+
+
+            if (!tile) {
+
+                return false;
+
+            }
+
+
+            if (
+                tile.hasWater
+            ) {
+
+                return false;
+
+            }
+
+
+            if (
+                tileHasBuilding(
+                    x,
+                    y
+                ) ||
+                tileHasRoad(
+                    x,
+                    y
+                ) ||
+                tileInsideLumberZone(
+                    x,
+                    y
+                )
+            ) {
+
+                return false;
+
+            }
+
+
+            /*
+                Trær og annen nature
+                blokkerer Quarry.
+
+                Stone er det eneste
+                nature-elementet vi tillater.
+            */
+
+            if (
+                tile.hasNature
+            ) {
+
+                if (
+                    tile.nature !==
+                    "stone"
+                ) {
+
+                    return false;
+
+                }
+
+
+                foundStone =
+                    true;
+
+            }
+
+        }
+
+    }
+
+
+    /*
+        Minst én stone-tile må ligge
+        under footprinten.
+    */
+
+    return foundStone;
+
+}
+
 function drawBuildings() {
 
     for (
@@ -7466,12 +8835,23 @@ function drawBuildPreview() {
     }
 
 
+    const validPlacement =
+        buildMode ===
+            "stoneQuarry"
+            ? canPlaceStoneQuarry(
+                def,
+                mouse.tileX,
+                mouse.tileY
+            )
+            : canPlaceBuilding(
+                def,
+                mouse.tileX,
+                mouse.tileY
+            );
+
+
     const valid =
-        canPlaceBuilding(
-            def,
-            mouse.tileX,
-            mouse.tileY
-        ) &&
+        validPlacement &&
         canAffordBuilding(
             def
         );
@@ -8225,37 +9605,206 @@ function updateDebugUI() {
 
 function processNewDay() {
 
+    worldState.production.foodToday =
+        0;
+
+    worldState.production.foodWastedToday =
+        0;
+
+    worldState.production.woodToday =
+        0;
+
+    worldState.production.stoneToday =
+        0;
+
+    worldState.production.manualWoodToday =
+        0;
+
+
+    let totalRequired =
+        0;
+
+
+    let totalConsumed =
+        0;
+
+
+    let totalMissing =
+        0;
+
+
+    let hungryHouseholds =
+        0;
+
+
     /*
-        Befolkningen spiser én gang
-        ved starten på en ny dag.
+        Hver familie spiser fra sitt
+        eget pantry.
     */
 
-    const foodConsumed =
-        getPopulation();
+    for (
+        const family
+        of worldState.families
+    ) {
+
+        if (
+            !Number.isFinite(
+                family.foodStorage
+            )
+        ) {
+
+            family.foodStorage =
+                0;
+
+        }
 
 
-    worldState.resources.food -=
-        foodConsumed;
+        const required =
+            getFamilyDailyFoodNeed(
+                family
+            );
 
 
-    worldState.resources.food =
-        Math.max(
-            0,
-            worldState.resources.food
-        );
+        const consumed =
+            Math.min(
+                required,
+                family.foodStorage
+            );
+
+
+        const missing =
+            Math.max(
+                0,
+                required -
+                consumed
+            );
+
+
+        family.foodStorage -=
+            consumed;
+
+
+        totalRequired +=
+            required;
+
+
+        totalConsumed +=
+            consumed;
+
+
+        totalMissing +=
+            missing;
+
+
+        if (
+            missing > 0
+        ) {
+
+            hungryHouseholds +=
+                1;
+
+        }
+
+    }
 
 
     /*
-        Nye familier kan ankomme
-        etter dagens forbruk.
+        Faktisk hunger.
+    */
+
+    worldState.foodStatus.lastRequired =
+        totalRequired;
+
+
+    worldState.foodStatus.lastConsumed =
+        totalConsumed;
+
+
+    worldState.foodStatus.shortageAmount =
+        totalMissing;
+
+
+    worldState.foodStatus.shortageActive =
+        totalMissing > 0;
+
+
+    worldState.foodStatus.hungryHouseholds =
+        hungryHouseholds;
+
+
+    worldState.foodStatus.hungryResidents =
+        totalMissing;
+
+
+    if (
+        worldState.foodStatus.shortageActive
+    ) {
+
+        worldState.foodStatus
+            .consecutiveShortageDays +=
+                1;
+
+    }
+    else {
+
+        worldState.foodStatus
+            .consecutiveShortageDays =
+                0;
+
+    }
+
+
+    /*
+        Etter dagens måltid prøver
+        husholdene å fylle opp igjen.
+
+        Foreløpig skjer dette automatisk.
+
+        Neste steg erstatter dette med
+        faktiske NPC-turer til Market/
+        Settlement Center.
+    */
+
+    refillAllHouseholdsFromDepots();
+
+
+    /*
+        Immigration vurderes først etter
+        at matforsyningen er vurdert.
     */
 
     processPopulationGrowth();
 
 
-    console.log(
-        `Day ${worldState.time.day}: -${foodConsumed} Food`
-    );
+    syncLegacyFoodResource();
+
+
+    if (
+        worldState.foodStatus.shortageActive
+    ) {
+
+        console.log(
+            `Day ${worldState.time.day}: Hunger! ${totalConsumed}/${totalRequired} meals available. ${totalMissing} resident(s) missed food.`
+        );
+
+    }
+    else if (
+        worldState.foodStatus
+            .distributionShortageActive
+    ) {
+
+        console.log(
+            `Day ${worldState.time.day}: Food supply shortage. Households could not fully refill their food storage.`
+        );
+
+    }
+    else {
+
+        console.log(
+            `Day ${worldState.time.day}: ${totalConsumed}/${totalRequired} Food consumed.`
+        );
+
+    }
 
 
     updateSettlementUI();
@@ -8797,6 +10346,811 @@ function getFamilyById(
 
 }
 
+/* =========================================================
+   FOOD STORAGE
+   ========================================================= */
+
+function getFoodStorageCapacity(
+    building
+) {
+
+    if (!building) {
+        return 0;
+    }
+
+
+    const def =
+        BUILDING_DEFS[
+            building.type
+        ];
+
+
+    return (
+        def?.foodStorageCapacity ||
+        0
+    );
+
+}
+
+
+function getFoodDepotBuildings() {
+
+    /*
+        Market Hall brukes først.
+
+        Settlement Center fungerer
+        som mindre reserve-lager.
+    */
+
+    const markets =
+        worldState.buildings.filter(
+            building =>
+                building.type ===
+                "marketHall"
+        );
+
+
+    const centers =
+        worldState.buildings.filter(
+            building =>
+                building.type ===
+                "settlementCenter"
+        );
+
+
+    return [
+        ...markets,
+        ...centers
+    ];
+
+}
+
+
+function getFamilyFoodCapacity(
+    family
+) {
+
+    if (!family) {
+        return 0;
+    }
+
+
+    const members =
+        getFamilyMembers(
+            family
+        );
+
+
+    return (
+        members.length *
+        HOUSEHOLD_FOOD_DAYS
+    );
+
+}
+
+
+function getFamilyDailyFoodNeed(
+    family
+) {
+
+    if (!family) {
+        return 0;
+    }
+
+
+    return getFamilyMembers(
+        family
+    ).length;
+
+}
+
+
+function getTotalMarketFood() {
+
+    let total =
+        0;
+
+
+    for (
+        const building
+        of worldState.buildings
+    ) {
+
+        if (
+            building.type !==
+            "marketHall"
+        ) {
+
+            continue;
+
+        }
+
+
+        total +=
+            Number.isFinite(
+                building.foodStorage
+            )
+                ? building.foodStorage
+                : 0;
+
+    }
+
+
+    return total;
+
+}
+
+
+function getTotalMarketFoodCapacity() {
+
+    let total =
+        0;
+
+
+    for (
+        const building
+        of worldState.buildings
+    ) {
+
+        if (
+            building.type !==
+            "marketHall"
+        ) {
+
+            continue;
+
+        }
+
+
+        total +=
+            getFoodStorageCapacity(
+                building
+            );
+
+    }
+
+
+    return total;
+
+}
+
+
+function getTotalCenterFood() {
+
+    let total =
+        0;
+
+
+    for (
+        const building
+        of worldState.buildings
+    ) {
+
+        if (
+            building.type !==
+            "settlementCenter"
+        ) {
+
+            continue;
+
+        }
+
+
+        total +=
+            Number.isFinite(
+                building.foodStorage
+            )
+                ? building.foodStorage
+                : 0;
+
+    }
+
+
+    return total;
+
+}
+
+
+function getTotalCenterFoodCapacity() {
+
+    let total =
+        0;
+
+
+    for (
+        const building
+        of worldState.buildings
+    ) {
+
+        if (
+            building.type !==
+            "settlementCenter"
+        ) {
+
+            continue;
+
+        }
+
+
+        total +=
+            getFoodStorageCapacity(
+                building
+            );
+
+    }
+
+
+    return total;
+
+}
+
+
+function getTotalHouseholdFood() {
+
+    let total =
+        0;
+
+
+    for (
+        const family
+        of worldState.families
+    ) {
+
+        total +=
+            Number.isFinite(
+                family.foodStorage
+            )
+                ? family.foodStorage
+                : 0;
+
+    }
+
+
+    return total;
+
+}
+
+
+function getTotalHouseholdFoodCapacity() {
+
+    let total =
+        0;
+
+
+    for (
+        const family
+        of worldState.families
+    ) {
+
+        total +=
+            getFamilyFoodCapacity(
+                family
+            );
+
+    }
+
+
+    return total;
+
+}
+
+
+function getTotalFoodAvailable() {
+
+    return (
+        getTotalMarketFood() +
+        getTotalCenterFood() +
+        getTotalHouseholdFood()
+    );
+
+}
+
+
+function syncLegacyFoodResource() {
+
+    /*
+        resources.food beholdes foreløpig
+        for save-kompatibilitet.
+
+        Det er IKKE lenger et ekte lager.
+    */
+
+    worldState.resources.food =
+        getTotalFoodAvailable();
+
+}
+
+
+function storeFoodInDepots(
+    amount
+) {
+
+    let remaining =
+        Math.max(
+            0,
+            amount
+        );
+
+
+    let stored =
+        0;
+
+
+    const depots =
+        getFoodDepotBuildings();
+
+
+    for (
+        const building
+        of depots
+    ) {
+
+        if (
+            remaining <= 0
+        ) {
+
+            break;
+
+        }
+
+
+        if (
+            !Number.isFinite(
+                building.foodStorage
+            )
+        ) {
+
+            building.foodStorage =
+                0;
+
+        }
+
+
+        const capacity =
+            getFoodStorageCapacity(
+                building
+            );
+
+
+        const freeSpace =
+            Math.max(
+                0,
+                capacity -
+                building.foodStorage
+            );
+
+
+        const amountToStore =
+            Math.min(
+                remaining,
+                freeSpace
+            );
+
+
+        building.foodStorage +=
+            amountToStore;
+
+
+        remaining -=
+            amountToStore;
+
+
+        stored +=
+            amountToStore;
+
+    }
+
+
+    syncLegacyFoodResource();
+
+
+    return {
+
+        stored:
+            stored,
+
+        lost:
+            remaining
+
+    };
+
+}
+
+
+function takeFoodFromDepots(
+    amount
+) {
+
+    let remaining =
+        Math.max(
+            0,
+            amount
+        );
+
+
+    let taken =
+        0;
+
+
+    /*
+        Foretrekk Market Hall.
+
+        Hvis den er tom brukes
+        Settlement Center.
+    */
+
+    const depots =
+        getFoodDepotBuildings();
+
+
+    for (
+        const building
+        of depots
+    ) {
+
+        if (
+            remaining <= 0
+        ) {
+
+            break;
+
+        }
+
+
+        if (
+            !Number.isFinite(
+                building.foodStorage
+            )
+        ) {
+
+            building.foodStorage =
+                0;
+
+        }
+
+
+        const amountToTake =
+            Math.min(
+                remaining,
+                building.foodStorage
+            );
+
+
+        building.foodStorage -=
+            amountToTake;
+
+
+        remaining -=
+            amountToTake;
+
+
+        taken +=
+            amountToTake;
+
+    }
+
+
+    return taken;
+
+}
+
+
+function refillFamilyFoodStorage(
+    family
+) {
+
+    if (!family) {
+        return 0;
+    }
+
+
+    if (
+        !Number.isFinite(
+            family.foodStorage
+        )
+    ) {
+
+        family.foodStorage =
+            0;
+
+    }
+
+
+    const dailyNeed =
+        getFamilyDailyFoodNeed(
+            family
+        );
+
+
+    if (
+        dailyNeed <= 0
+    ) {
+
+        return 0;
+
+    }
+
+
+    const refillThreshold =
+        dailyNeed *
+        HOUSEHOLD_REFILL_THRESHOLD_DAYS;
+
+
+    /*
+        Har familien fortsatt mer enn
+        to dager med mat, trenger de
+        ikke hente noe.
+    */
+
+    if (
+        family.foodStorage >
+        refillThreshold
+    ) {
+
+        return 0;
+
+    }
+
+
+    const capacity =
+        getFamilyFoodCapacity(
+            family
+        );
+
+
+    const wanted =
+        Math.max(
+            0,
+            capacity -
+            family.foodStorage
+        );
+
+
+    const received =
+        takeFoodFromDepots(
+            wanted
+        );
+
+
+    family.foodStorage +=
+        received;
+
+
+    syncLegacyFoodResource();
+
+
+    return received;
+
+}
+
+
+function refillAllHouseholdsFromDepots() {
+
+    let totalWanted =
+        0;
+
+
+    let totalReceived =
+        0;
+
+
+    let householdsUnableToRefill =
+        0;
+
+
+    for (
+        const family
+        of worldState.families
+    ) {
+
+        const dailyNeed =
+            getFamilyDailyFoodNeed(
+                family
+            );
+
+
+        if (
+            dailyNeed <= 0
+        ) {
+
+            continue;
+
+        }
+
+
+        if (
+            !Number.isFinite(
+                family.foodStorage
+            )
+        ) {
+
+            family.foodStorage =
+                0;
+
+        }
+
+
+        const threshold =
+            dailyNeed *
+            HOUSEHOLD_REFILL_THRESHOLD_DAYS;
+
+
+        if (
+            family.foodStorage >
+            threshold
+        ) {
+
+            continue;
+
+        }
+
+
+        const capacity =
+            getFamilyFoodCapacity(
+                family
+            );
+
+
+        const wanted =
+            Math.max(
+                0,
+                capacity -
+                family.foodStorage
+            );
+
+
+        totalWanted +=
+            wanted;
+
+
+        const received =
+            takeFoodFromDepots(
+                wanted
+            );
+
+
+        family.foodStorage +=
+            received;
+
+
+        totalReceived +=
+            received;
+
+
+        if (
+            received <
+            wanted
+        ) {
+
+            householdsUnableToRefill +=
+                1;
+
+        }
+
+    }
+
+
+    worldState.foodStatus
+        .unfilledHouseholdFood =
+            Math.max(
+                0,
+                totalWanted -
+                totalReceived
+            );
+
+
+    worldState.foodStatus
+        .householdsUnableToRefill =
+            householdsUnableToRefill;
+
+
+    worldState.foodStatus
+        .distributionShortageActive =
+            (
+                totalWanted > 0 &&
+                totalReceived <
+                    totalWanted
+            );
+
+
+    syncLegacyFoodResource();
+
+}
+
+
+function getMarketHalls() {
+
+    return worldState.buildings.filter(
+        building =>
+            building.type ===
+            "marketHall"
+    );
+
+}
+
+
+function getTotalMarketFood() {
+
+    let total =
+        0;
+
+
+    for (
+        const building
+        of getMarketHalls()
+    ) {
+
+        total +=
+            Number.isFinite(
+                building.foodStorage
+            )
+                ? building.foodStorage
+                : 0;
+
+    }
+
+
+    return total;
+
+}
+
+
+function getTotalMarketFoodCapacity() {
+
+    return (
+        getMarketHalls().length *
+        MARKET_HALL_FOOD_CAPACITY
+    );
+
+}
+
+function getTotalHouseholdFood() {
+
+    let total =
+        0;
+
+
+    for (
+        const family
+        of worldState.families
+    ) {
+
+        total +=
+            Number.isFinite(
+                family.foodStorage
+            )
+                ? family.foodStorage
+                : 0;
+
+    }
+
+
+    return total;
+
+}
+
+function getTotalHouseholdFoodCapacity() {
+
+    let total =
+        0;
+
+
+    for (
+        const family
+        of worldState.families
+    ) {
+
+        total +=
+            getFamilyFoodCapacity(
+                family
+            );
+
+    }
+
+
+    return total;
+
+}
 
 function findHomeForFamily(
     familySize
@@ -8894,7 +11248,10 @@ function createFamily(
         memberIds: [],
 
         foundedDay:
-            worldState.time.day
+            worldState.time.day,
+
+        foodStorage:
+            0
 
     };
 
@@ -9056,6 +11413,27 @@ function createFamily(
 
 function processPopulationGrowth() {
 
+    /*
+        Ingen nye familier flytter inn
+        på en dag der settlementet ikke
+        klarte å mate dagens befolkning.
+    */
+
+    if (
+        worldState.foodStatus
+            .shortageActive ||
+        worldState.foodStatus
+            .distributionShortageActive
+    ) {
+
+        console.log(
+            "Immigration stopped because of food shortage."
+        );
+
+        return;
+
+    }
+
     const largestAvailableHome =
         getLargestAvailableHome();
 
@@ -9077,7 +11455,7 @@ function processPopulationGrowth() {
     */
 
     if (
-        worldState.resources.food <
+        getTotalFoodAvailable() <
         MIN_FOOD_FOR_POPULATION_GROWTH
     ) {
 
@@ -9120,6 +11498,10 @@ function processPopulationGrowth() {
             familySize,
             home.id
         );
+
+    refillFamilyFoodStorage(
+        family
+    );
 
 
     console.log(
@@ -9203,6 +11585,10 @@ function update(
     refreshOpenBuildingInfo();
 
     refreshPeopleMenu(
+        deltaTime
+    );
+
+    refreshEconomyMenu(
         deltaTime
     );
 
@@ -13183,8 +15569,11 @@ function updateSettlementUI() {
         `${getPopulation()} / ${populationCapacity}`;
 
 
+    syncLegacyFoodResource();
+
+
     resourceFoodText.textContent =
-        worldState.resources.food;
+        getTotalFoodAvailable();
 
 
     resourceWoodText.textContent =

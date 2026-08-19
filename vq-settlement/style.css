@@ -877,3 +877,116 @@ body {
 
     font-size: 11px;
 }
+
+
+/* =========================================================
+   ECONOMY MENU
+   ========================================================= */
+
+#economy-menu-layer {
+    position: fixed;
+
+    inset: 0;
+
+    display: none;
+
+    z-index: 900;
+
+    pointer-events: none;
+}
+
+
+#economy-menu-layer.open {
+    display: block;
+}
+
+
+#economy-menu {
+    position: absolute;
+
+    right: 0;
+    bottom: 100px;
+
+    width: min(
+        460px,
+        calc(100vw - 40px)
+    );
+
+    max-height: min(
+        620px,
+        calc(100vh - 120px)
+    );
+
+    display: flex;
+    flex-direction: column;
+
+    padding: 12px;
+
+    background: #252525;
+
+    border: 3px solid #111;
+
+    box-shadow:
+        inset 1px 1px 0 #555,
+        inset -1px -1px 0 #111;
+
+    color: white;
+
+    font-family: monospace;
+
+    pointer-events: auto;
+}
+
+
+#economy-menu-title {
+    padding: 9px;
+
+    background: #151515;
+
+    border: 2px solid #444;
+
+    text-align: center;
+
+    font-size: 15px;
+    font-weight: bold;
+}
+
+
+#economy-menu-content {
+    overflow-y: auto;
+}
+
+
+.economy-resource {
+    margin-bottom: 8px;
+    padding: 10px;
+
+    background: #1c1c1c;
+
+    border: 1px solid #444;
+
+    font-size: 11px;
+
+    line-height: 1.9;
+}
+
+
+.economy-resource-title {
+    margin-bottom: 5px;
+    padding-bottom: 4px;
+
+    border-bottom: 1px solid #444;
+
+    font-size: 13px;
+    font-weight: bold;
+}
+
+
+.economy-positive {
+    color: #9ddd8a;
+}
+
+
+.economy-negative {
+    color: #e09a8a;
+}
