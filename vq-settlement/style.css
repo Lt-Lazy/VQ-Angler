@@ -14,6 +14,44 @@
     box-sizing: border-box;
 }
 
+:root {
+
+    /* =====================================================
+       RETRO BEIGE UI PALETTE
+       ===================================================== */
+
+    --ui-black:
+        #2B271F;
+
+    --ui-dark:
+        #373127;
+
+    --ui-base:
+        #4A4335;
+
+    --ui-panel:
+        #5B5241;
+
+    --ui-button:
+        #706653;
+
+    --ui-button-hover:
+        #817560;
+
+    --ui-border-dark:
+        #29251E;
+
+    --ui-border-light:
+        #A99B7E;
+
+    --ui-text:
+        #F1E6CA;
+
+    --ui-text-muted:
+        #C8BCA1;
+
+}
+
 
 /* ---------------------------------------------------------
    PAGE
@@ -25,7 +63,7 @@ body {
     height: 100%;
     overflow: hidden;
 
-    background: #111;
+    background: var(--ui-black);
 }
 
 
@@ -44,7 +82,7 @@ body {
     grid-template-columns: 190px minmax(0, 1fr);
     grid-template-rows: minmax(0, 1fr) 100px;
 
-    background: #171717;
+    background: var(--ui-dark);
 
     overflow: hidden;
 }
@@ -65,11 +103,11 @@ body {
 
     padding: 10px;
 
-    background: #252525;
+    border-right: 3px solid var(--ui-border-dark);
 
     border-right: 3px solid #111;
 
-    color: white;
+    color: var(--ui-text);
 
     font-family: monospace;
 
@@ -84,9 +122,12 @@ body {
 
     margin-bottom: 12px;
 
-    background: #151515;
+    background:
+    var(--ui-dark);
 
-    border: 2px solid #444;
+    border:
+    2px solid
+    var(--ui-border-light);
 
     font-size: 17px;
     font-weight: bold;
@@ -98,16 +139,21 @@ body {
 .ui-section {
     margin-bottom: 12px;
 
-    border: 2px solid #161616;
+    border:
+    2px solid
+    var(--ui-border-dark);
 
-    background: #303030;
+    
+    background:
+        var(--ui-panel);
 }
 
 
 .ui-section-title {
     padding: 6px 8px;
 
-    background: #1b1b1b;
+    background:
+    var(--ui-dark);
 
     font-size: 13px;
     font-weight: bold;
@@ -179,11 +225,14 @@ body {
 
     padding: 10px 14px;
 
-    background: #252525;
+    background: var(--ui-base);
 
-    border-top: 3px solid #111;
+    border-top:
+    3px solid
+    var(--ui-border-dark);
 
-    color: white;
+    color:
+    var(--ui-text);
 
     font-family: monospace;
 
@@ -209,16 +258,23 @@ body {
 
 
 .toolbar-slot {
+
     width: 58px;
     height: 58px;
 
-    background: #333;
+    background:
+        var(--ui-button);
 
-    border: 2px solid #111;
+    border:
+        2px solid
+        var(--ui-border-dark);
 
     box-shadow:
-        inset 1px 1px 0 #555,
-        inset -1px -1px 0 #1b1b1b;
+        inset 1px 1px 0
+            var(--ui-border-light),
+
+        inset -1px -1px 0
+            var(--ui-border-dark);
 }
 
 
@@ -271,11 +327,15 @@ body {
 
     padding: 8px;
 
-    background: #3a3a3a;
+    background:
+    var(--ui-button);
 
-    border: 2px solid #161616;
+    border:
+    2px solid
+    var(--ui-border-dark);
 
-    color: white;
+    color:
+    var(--ui-text);
 
     font-family: monospace;
     font-size: 12px;
@@ -285,7 +345,8 @@ body {
 
 
 .ui-action-button:hover {
-    background: #484848;
+    background:
+        var(--ui-button-hover);
 }
 
 
@@ -373,15 +434,22 @@ body {
 
     padding: 14px;
 
-    background: #252525;
+    background:
+        var(--ui-base);
 
-    border: 3px solid #111;
+    border:
+        3px solid
+        var(--ui-border-dark);
 
     box-shadow:
-        inset 1px 1px 0 #555,
-        inset -1px -1px 0 #111;
+        inset 1px 1px 0
+            var(--ui-border-light),
 
-    color: white;
+        inset -1px -1px 0
+            var(--ui-border-dark);
+
+    color:
+        var(--ui-text);
 
     font-family: monospace;
 }
@@ -426,11 +494,15 @@ body {
     margin-top: 7px;
     padding: 9px;
 
-    background: #3a3a3a;
+    background:
+    var(--ui-button);
 
-    border: 2px solid #111;
+    border:
+    2px solid
+    var(--ui-border-dark);
 
-    color: white;
+    color:
+    var(--ui-text);
 
     font-family: monospace;
 
@@ -439,7 +511,8 @@ body {
 
 
 .settings-menu-button:hover {
-    background: #4a4a4a;
+    background:
+        var(--ui-button-hover);
 }
 
 
@@ -477,15 +550,22 @@ body {
 
     padding: 14px;
 
-    background: #252525;
+    background:
+        var(--ui-base);
 
-    border: 3px solid #111;
+    border:
+        3px solid
+        var(--ui-border-dark);
 
     box-shadow:
-        inset 1px 1px 0 #555,
-        inset -1px -1px 0 #111;
+        inset 1px 1px 0
+            var(--ui-border-light),
 
-    color: white;
+        inset -1px -1px 0
+            var(--ui-border-dark);
+
+    color:
+        var(--ui-text);
 
     font-family: monospace;
 }
@@ -627,11 +707,15 @@ body {
 
     padding: 5px 3px;
 
-    background: #333;
+    background:
+    var(--ui-button);
 
-    border: 1px solid #111;
+    border:
+    2px solid
+    var(--ui-border-dark);
 
-    color: #d8d8d8;
+    color:
+        var(--ui-text);
 
     font-family: monospace;
     font-size: 10px;
@@ -641,7 +725,8 @@ body {
 
 
 .time-control-button:hover {
-    background: #444;
+    background:
+        var(--ui-button-hover);
 }
 
 
@@ -701,15 +786,22 @@ body {
 
     padding: 12px;
 
-    background: #252525;
+    background:
+    var(--ui-base);
 
-    border: 3px solid #111;
+    border:
+    3px solid
+    var(--ui-border-dark);
 
     box-shadow:
-        inset 1px 1px 0 #555,
-        inset -1px -1px 0 #111;
+        inset 1px 1px 0
+            var(--ui-border-light),
 
-    color: white;
+        inset -1px -1px 0
+            var(--ui-border-dark);
+
+    color:
+        var(--ui-text);
 
     font-family: monospace;
 
@@ -750,11 +842,15 @@ body {
 .people-menu-header-button {
     height: 34px;
 
-    background: #3a3a3a;
+    background:
+        var(--ui-button);
 
-    border: 2px solid #111;
+    border:
+    2px solid
+    var(--ui-border-dark);
 
-    color: white;
+    color:
+    var(--ui-text);
 
     font-family: monospace;
     font-size: 11px;
@@ -764,7 +860,8 @@ body {
 
 
 .people-menu-header-button:hover {
-    background: #4a4a4a;
+    background:
+        var(--ui-button-hover);
 }
 
 
@@ -922,15 +1019,22 @@ body {
 
     padding: 12px;
 
-    background: #252525;
+    background:
+        var(--ui-base);
 
-    border: 3px solid #111;
+    border:
+        3px solid
+        var(--ui-border-dark);
 
     box-shadow:
-        inset 1px 1px 0 #555,
-        inset -1px -1px 0 #111;
+        inset 1px 1px 0
+            var(--ui-border-light),
 
-    color: white;
+        inset -1px -1px 0
+            var(--ui-border-dark);
+
+    color:
+        var(--ui-text);
 
     font-family: monospace;
 
