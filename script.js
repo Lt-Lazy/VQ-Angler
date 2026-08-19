@@ -25,6 +25,8 @@
 
 const games = [
 
+    /*
+
     {
         id: "vq-dungeons",
 
@@ -32,7 +34,7 @@ const games = [
 
         shortTitle: "D",
 
-        status: "IN DEVELOPMENT",
+        status: "PROJECT PAUSED",
 
         type: "OPEN WORLD RPG",
 
@@ -43,7 +45,7 @@ const games = [
 
         image: "",
 
-        featured: true,
+        featured: false,
 
         tags: [
             "3D/2D",
@@ -53,7 +55,7 @@ const games = [
             "ADVENTURE"
         ]
     },
-
+    */
 
     {
         id: "vq-settlement",
@@ -67,13 +69,13 @@ const games = [
         type: "SETTLEMENT RPG",
 
         description:
-            "A new VoidQuest project focused on building, survival and developing a settlement in a persistent game world.",
+            "A new VoidQuest project focused on simulation, survival and developing a settlement/colony in a persistent game world. Details are the main focus, not graphics",
 
         path: "./vq-settlement/",
 
         image: "",
 
-        featured: false,
+        featured: true,
 
         tags: [
             "2D",
@@ -95,6 +97,17 @@ const games = [
 
 
 const news = [
+
+    {
+        date: "19 AUG 2026, 22:44 (UTC+2)",
+
+        game: "VQ-Settlement",
+
+        title: "Pre-apha game are now playable to test",
+
+        text:
+            "Everyone can now be apart of the development process and test the game while we add features. The game are still in the early phase. Just click the PLAY button on the main page! "
+    },
 
     {
         date: "17 AUG 2026",
@@ -125,10 +138,10 @@ const news = [
 
         game: "VQ DUNGEONS",
 
-        title: "VQ Dungeons development continues",
+        title: "VQ Dungeons development on pause",
 
         text:
-            "The dungeon crawler remains one of the active VoidQuest game projects."
+            "The dungeon crawler VQ Dungeons are sat on pause, because of the success of VQ-Settlement."
     }
 
 ];
